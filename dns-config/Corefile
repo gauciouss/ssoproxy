@@ -1,0 +1,11 @@
+.:53 {
+    forward . 8.8.8.8           # 如果不是我們要的 domain，就轉發給 Google DNS 處理
+    log                         # 開啟查詢日誌，方便我們看分流戰報
+    errors
+}
+
+test.gd.com:53 {
+    file /etc/coredns/test.gd.com.zone  # 指定我們自訂的網域解析檔
+    log
+    errors
+}

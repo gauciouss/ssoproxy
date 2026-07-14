@@ -1,0 +1,23 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+WORKDIR /src
+
+# 複製專案檔並進行 NuGet 還原
+COPY ["ssoproxy.csproj", "."]
+RUN dotnet restore "ssoproxy.csproj"
+
+# 複製所有原始碼並進行編譯釋出
+COPY . .
+RUN dotnet publish "ssoproxy.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# 部署階段：使用 Alpine 確保最小足跡
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+
+# 鎖定台灣時區 (GMT+8)
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/Asia/Taipei /etc/localtime && \
+    echo "Asia/Taipei" > /etc/timezone
+
+EXPOSE 80
+ENTRYPOINT ["dotnet", "ssoproxy.dll"]

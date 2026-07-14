@@ -1,0 +1,124 @@
+version: '3.8'
+
+networks:
+  sso-poc-secure-net:
+    driver: bridge
+    ipam:
+      config:
+        # 使用極其安全的 B 類隔離網段
+        - subnet: 172.31.254.0/24
+
+services:
+  # ========================================================
+  # 【唯一對外門戶】F5 BIG-IP LTM 模擬貨櫃 (外露極安全冷門的 9999 埠)
+  # ========================================================
+  sso-poc-f5:
+    image: nginx:alpine
+    container_name: sso-poc-f5-ltm
+    ports:
+      - "9999:80" # 桌機實體用 9999 埠訪問，絕不撞 Port
+    volumes:
+      - ./f5-config/f5-ltm.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      sso-poc-secure-net:
+        ipv4_address: 172.31.254.5
+    depends_on:
+      - sso-poc-proxy1
+      - sso-poc-proxy2
+    restart: always
+
+  # ========================================================
+  # SSO Proxy 雙活集群 (完全隱蔽在內網，不對桌機暴露任何 Port)
+  # ========================================================
+  sso-poc-proxy1:
+    build:
+      context: ./ssoproxy
+      dockerfile: Dockerfile
+    container_name: sso-poc-proxy-1
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__Redis=sso-poc-sentinel1:26379,sso-poc-sentinel2:26379,password=YourStrongPassword,serviceName=mymaster,abortConnect=false
+      - SsoWhitelist=["^/target-web/health$"]
+    depends_on:
+      - sso-poc-sentinel1
+      - sso-poc-sentinel2
+    networks:
+      sso-poc-secure-net:
+        ipv4_address: 172.31.254.11
+    restart: always
+
+  sso-poc-proxy2:
+    build:
+      context: ./ssoproxy
+      dockerfile: Dockerfile
+    container_name: sso-poc-proxy-2
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__Redis=sso-poc-sentinel1:26379,sso-poc-sentinel2:26379,password=YourStrongPassword,serviceName=mymaster,abortConnect=false
+      - SsoWhitelist=["^/target-web/health$"]
+    depends_on:
+      - sso-poc-sentinel1
+      - sso-poc-sentinel2
+    networks:
+      sso-poc-secure-net:
+        ipv4_address: 172.31.254.12
+    restart: always
+
+  # ========================================================
+  # 後端儲存端與目標網頁系統 (維持不變)
+  # ========================================================
+  sso-poc-redis-master:
+    image: redis:7.2-alpine
+    container_name: sso-poc-redis-master
+    command: redis-server --appendonly yes --requirepass YourStrongPassword --masterauth YourStrongPassword
+    networks:
+      - sso-poc-secure-net
+    restart: always
+
+  sso-poc-redis-slave:
+    image: redis:7.2-alpine
+    container_name: sso-poc-redis-slave
+    command: redis-server --replicaof sso-poc-redis-master 6379 --appendonly yes --requirepass YourStrongPassword --masterauth YourStrongPassword
+    depends_on:
+      - sso-poc-redis-master
+    networks:
+      - sso-poc-secure-net
+    restart: always
+
+  sso-poc-sentinel1:
+    image: redis:7.2-alpine
+    container_name: sso-poc-sentinel-1
+    command: >
+      sh -c "cp /usr/local/etc/redis/sentinel.conf /data/sentinel.conf && 
+             redis-server /data/sentinel.conf --sentinel"
+    volumes:
+      - ./redis-config:/usr/local/etc/redis
+    depends_on:
+      - sso-poc-redis-master
+    links:
+      - sso-poc-redis-master:redis-master
+    networks:
+      - sso-poc-secure-net
+    restart: always
+
+  sso-poc-sentinel2:
+    image: redis:7.2-alpine
+    container_name: sso-poc-sentinel-2
+    command: >
+      sh -c "cp /usr/local/etc/redis/sentinel.conf /data/sentinel.conf && 
+             redis-server /data/sentinel.conf --sentinel"
+    volumes:
+      - ./redis-config:/usr/local/etc/redis
+    depends_on:
+      - sso-poc-redis-slave
+    links:
+      - sso-poc-redis-master:redis-master
+    networks:
+      - sso-poc-secure-net
+    restart: always
+
+  sso-poc-target-web:
+    image: nginx:alpine
+    container_name: sso-poc-target-web
+    networks:
+      - sso-poc-secure-net

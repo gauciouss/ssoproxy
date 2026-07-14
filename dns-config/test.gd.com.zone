@@ -1,0 +1,16 @@
+$ORIGIN test.gd.com.
+@   3600 IN SOA sns.dns.icann.org. noc.dns.icann.org. (
+        2026070101 ; serial
+        7200       ; refresh
+        3600       ; retry
+        1209600    ; expire
+        3600       ; minimum
+)
+
+; 告訴 DNS 伺服器是誰
+@   3600 IN NS  ns1.test.gd.com.
+ns1 3600 IN A   127.0.0.1
+
+; 【核心：DNS 輪詢負載平衡】
+; 【修正：DNS 不再輪詢，改由唯一指向 F5 虛擬 IP】
+@   60   IN A   192.168.99.5   ; 修正為 F5 的新內部 IP
