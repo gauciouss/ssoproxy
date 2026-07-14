@@ -1,0 +1,173 @@
+@{
+    ViewData["Title"] = "SSO 統一登入";
+}
+
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 75vh;">
+    <div class="card shadow-lg p-4 border-0" style="max-width: 420px; width: 100%; border-radius: 12px;">
+        <div class="text-center mb-4">
+            <h3 class="fw-bold text-primary">SSO 統一登入</h3>
+            <p class="text-muted small">請輸入您的憑證以訪問受保護的系統</p>
+        </div>
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        <form id="loginForm" asp-controller="Home" asp-action="SubmitSsoLogin" method="post" onsubmit="return validateCaptcha(event)">
+            <!-- 帳號欄位 -->
+            <div class="mb-3">
+                <label for="username" class="form-label fw-semibold">帳號</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-person"></i></span>
+                    <input type="text" class="form-control bg-light border-start-0" id="username" name="username" placeholder="請輸入帳號" required autocomplete="username">
+                </div>
+            </div>
+
+            <!-- 密碼欄位 -->
+            <div class="mb-3">
+                <label for="password" class="form-label fw-semibold">密碼</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock"></i></span>
+                    <input type="password" class="form-control bg-light border-start-0" id="password" name="password" placeholder="請輸入密碼" required autocomplete="current-password">
+                </div>
+            </div>
+
+            <!-- 圖形驗證碼欄位 -->
+            <div class="mb-4">
+                <label for="captchaInput" class="form-label fw-semibold">圖形驗證碼</label>
+                <div class="row g-2 align-items-center">
+                    <div class="col-6">
+                        <input type="text" class="form-control bg-light" id="captchaInput" name="captchaInput" placeholder="輸入驗證碼" required autocomplete="off" maxlength="4">
+                    </div>
+                    <div class="col-6 text-end">
+                        <canvas id="captchaCanvas" width="120" height="38" class="border rounded bg-white" style="cursor: pointer;" title="點擊重新整理驗證碼"></canvas>
+                    </div>
+                </div>
+                <div class="form-text text-muted small mt-1">看不清楚？點擊驗證碼圖片可重新產生。</div>
+                <div id="captchaError" class="text-danger small mt-1 d-none">驗證碼輸入錯誤，請重新整理後輸入！</div>
+            </div>
+
+            <!-- 隱藏欄位，用於後端校驗 -->
+            <input type="hidden" id="captchaValue" name="captchaValue">
+            <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
+
+            <!-- 提交按鈕 -->
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg fw-bold" style="border-radius: 8px;">登入</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- 引入 Bootstrap Icons 提升視覺設計 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <script>
+        let generatedCaptcha = "";
+
+        // 產生隨機驗證碼
+        function generateCaptchaCode() {
+            const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"; // 排除易混淆字元如 0, 1, O, I, l
+            let code = "";
+            for (let i = 0; i < 4; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        // 繪製圖形驗證碼至 Canvas
+        function drawCaptcha() {
+            const canvas = document.getElementById("captchaCanvas");
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            
+            // 清空畫布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 繪製隨機背景雜點與線條
+            ctx.fillStyle = "#f8f9fa";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 隨機干擾線
+            for (let i = 0; i < 4; i++) {
+                ctx.strokeStyle = getRandomColor(120, 200);
+                ctx.beginPath();
+                ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.stroke();
+            }
+
+            // 隨機干擾點
+            for (let i = 0; i < 30; i++) {
+                ctx.fillStyle = getRandomColor(150, 220);
+                ctx.beginPath();
+                ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, 1, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            // 繪製驗證碼文字 (帶有隨機扭曲、縮放、旋轉與顏色)
+            generatedCaptcha = generateCaptchaCode();
+            document.getElementById("captchaValue").value = generatedCaptcha; // 同步至隱藏欄位
+
+            ctx.font = "bold 24px 'Courier New', Courier, monospace";
+            ctx.textBaseline = "middle";
+
+            for (let i = 0; i < generatedCaptcha.length; i++) {
+                const char = generatedCaptcha[i];
+                ctx.fillStyle = getRandomColor(20, 100); // 偏深色文字
+
+                // 隨機變形設定
+                const x = 15 + i * 25 + Math.random() * 5;
+                const y = canvas.height / 2 + (Math.random() * 6 - 3);
+                const angle = (Math.random() * 30 - 15) * Math.PI / 180; // 旋轉 -15 到 15 度
+
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(angle);
+                ctx.fillText(char, -8, 0);
+                ctx.restore();
+            }
+        }
+
+        // 取得隨機顏色
+        function getRandomColor(min, max) {
+            const r = Math.floor(Math.random() * (max - min) + min);
+            const g = Math.floor(Math.random() * (max - min) + min);
+            const b = Math.floor(Math.random() * (max - min) + min);
+            return `rgb(${r},${g},${b})`;
+        }
+
+        // 前端驗證
+        function validateCaptcha(event) {
+            const inputVal = document.getElementById("captchaInput").value.trim().toUpperCase();
+            const captchaError = document.getElementById("captchaError");
+            
+            if (inputVal !== generatedCaptcha) {
+                event.preventDefault(); // 阻止表單提交
+                captchaError.classList.remove("d-none");
+                // 重新產生驗證碼
+                drawCaptcha();
+                document.getElementById("captchaInput").value = "";
+                document.getElementById("captchaInput").focus();
+                return false;
+            }
+            
+            captchaError.classList.add("d-none");
+            return true;
+        }
+
+        // 初始化
+        document.addEventListener("DOMContentLoaded", function() {
+            drawCaptcha();
+            
+            // 點擊 Canvas 重新整理驗證碼
+            document.getElementById("captchaCanvas").addEventListener("click", drawCaptcha);
+        });
+    </script>
+}

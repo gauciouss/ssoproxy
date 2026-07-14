@@ -11,7 +11,9 @@ public class PathValidatorService : IPathValidatorService
     private static readonly string[] SsoLoginPaths = new[]
     {
         "/Home/SsoLogin",
-        "/Home/SubmitSsoLogin"
+        "/Home/SubmitSsoLogin",
+        "/api/Token",
+        "/api/Token/"
     };
 
     public PathValidatorService(IConfiguration configuration)

@@ -34,8 +34,11 @@ namespace ssoproxy.Middleware
 
                 if (!context.Request.Headers.TryGetValue("Authorization", out var authHeader) || string.IsNullOrEmpty(authHeader))
                 {
-                    Logger.Warn("[SSO_MISSING_TOKEN] TraceId: {0}, 請求未夾帶驗證憑證，轉導至 SSO 登入頁面", traceId);
-                    context.Response.Redirect("/Home/SsoLogin");
+                    var returnUrl = $"{context.Request.Path}{context.Request.QueryString}";
+                    var loginUrl = $"/Home/SsoLogin?returnUrl={Uri.EscapeDataString(returnUrl)}";
+
+                    Logger.Warn("[SSO_MISSING_TOKEN] TraceId: {0}, 請求未夾帶驗證憑證，轉導至 SSO 登入頁面，returnUrl={1}", traceId, returnUrl);
+                    context.Response.Redirect(loginUrl);
                     return;
                 }
 
@@ -47,12 +50,23 @@ namespace ssoproxy.Middleware
                     Logger.Info("[SSO_AUTH_SUCCESS] TraceId: {0}, Token 驗證成功", traceId);
                     context.Request.Headers.Remove("Authorization");
                     context.Request.Headers.Append("X-User-Info", userJson);
+
+                    if (context.Request.Host.Host.Equals("test1.gd.com", StringComparison.OrdinalIgnoreCase) ||
+                        context.Request.Host.Host.Equals("test2.gd.com", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await _next(context);
+                        return;
+                    }
+
                     await _next(context);
                 }
                 else
                 {
-                    Logger.Warn("[SSO_AUTH_FAIL] TraceId: {0}, Token 已過期或不存在，轉導至 SSO 登入頁面", traceId);
-                    context.Response.Redirect("/Home/SsoLogin");
+                    var returnUrl = $"{context.Request.Path}{context.Request.QueryString}";
+                    var loginUrl = $"/Home/SsoLogin?returnUrl={Uri.EscapeDataString(returnUrl)}";
+
+                    Logger.Warn("[SSO_AUTH_FAIL] TraceId: {0}, Token 已過期或不存在，轉導至 SSO 登入頁面，returnUrl={1}", traceId, returnUrl);
+                    context.Response.Redirect(loginUrl);
                 }
             }
             catch (Exception ex)

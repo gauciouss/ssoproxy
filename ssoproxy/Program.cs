@@ -57,13 +57,13 @@ try
     // 6. 全局防禦 Middleware (包含由 IPathValidatorService 處理的免檢驗過濾，以及 Token 驗證)
     app.UseMiddleware<GlobalDefenseMiddleware>();
 
+    // 設定 YARP Reverse Proxy 路由 (先處理 host-based 轉發)
+    app.MapReverseProxy();
+
     // 設定 MVC 預設路由
     app.MapControllerRoute(
         name: "default",
         pattern: "{controller=Home}/{action=Index}/{id?}");
-
-    // 設定 YARP Reverse Proxy 路由 (作爲兜底)
-    app.MapReverseProxy();
 
     app.Run();
 }

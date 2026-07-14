@@ -1,5 +1,3 @@
-version: '3.8'
-
 networks:
   sso-poc-secure-net:
     driver: bridge
@@ -32,11 +30,14 @@ services:
   # ========================================================
   sso-poc-proxy1:
     build:
-      context: ./ssoproxy
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./ssoproxy/dockerfile
     container_name: sso-poc-proxy-1
+    ports:
+      - "80:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__Redis=sso-poc-sentinel1:26379,sso-poc-sentinel2:26379,password=YourStrongPassword,serviceName=mymaster,abortConnect=false
       - SsoWhitelist=["^/target-web/health$"]
     depends_on:
@@ -49,8 +50,8 @@ services:
 
   sso-poc-proxy2:
     build:
-      context: ./ssoproxy
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./ssoproxy/dockerfile
     container_name: sso-poc-proxy-2
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -117,8 +118,24 @@ services:
       - sso-poc-secure-net
     restart: always
 
-  sso-poc-target-web:
+  sso-poc-target-web1:
     image: nginx:alpine
-    container_name: sso-poc-target-web
+    container_name: sso-poc-target-web1
+    ports:
+      - "9090:80"
+    volumes:
+      - ./target-web1:/usr/share/nginx/html:ro
     networks:
       - sso-poc-secure-net
+    restart: always
+
+  sso-poc-target-web2:
+    image: nginx:alpine
+    container_name: sso-poc-target-web2
+    ports:
+      - "9091:80"
+    volumes:
+      - ./target-web2:/usr/share/nginx/html:ro
+    networks:
+      - sso-poc-secure-net
+    restart: always

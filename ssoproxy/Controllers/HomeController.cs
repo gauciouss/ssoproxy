@@ -27,19 +27,20 @@ public class HomeController : Controller
     }
 
     [HttpGet]
-    public IActionResult SsoLogin()
+    public IActionResult SsoLogin(string? returnUrl)
     {
+        ViewData["ReturnUrl"] = NormalizeReturnUrl(returnUrl);
         return View();
     }
 
     [HttpPost]
-    public async Task<IActionResult> SubmitSsoLogin(string username, string password, string captchaValue, string captchaInput)
+    public async Task<IActionResult> SubmitSsoLogin(string username, string password, string captchaValue, string captchaInput, string? returnUrl)
     {
         // 1. 後端進行圖形驗證碼二次校驗
         if (string.IsNullOrEmpty(captchaInput) || !captchaInput.Equals(captchaValue, StringComparison.OrdinalIgnoreCase))
         {
             TempData["ErrorMessage"] = "圖形驗證碼比對錯誤，請重新輸入！";
-            return RedirectToAction("SsoLogin");
+            return RedirectToAction("SsoLogin", new { returnUrl });
         }
 
         // 2. 使用 LoginService 進行帳號密碼驗證與 token 產生
@@ -49,11 +50,34 @@ public class HomeController : Controller
         {
             _logger.Info("[SSO_LOGIN_SUCCESS] 使用者 {Username} 成功登入系統，Token 已產生", username);
             TempData["Token"] = result.Token;
-            return RedirectToAction("Index");
+
+            var targetUrl = NormalizeReturnUrl(returnUrl);
+            return Redirect(targetUrl);
         }
 
         TempData["ErrorMessage"] = result.ErrorMessage ?? "帳號或密碼錯誤！";
-        return RedirectToAction("SsoLogin");
+        return RedirectToAction("SsoLogin", new { returnUrl });
+    }
+
+    private static string NormalizeReturnUrl(string? returnUrl)
+    {
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            return "/";
+        }
+
+        if (returnUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            returnUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return "/";
+        }
+
+        if (!returnUrl.StartsWith("/", StringComparison.Ordinal))
+        {
+            return $"/{returnUrl}";
+        }
+
+        return returnUrl;
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

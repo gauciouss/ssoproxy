@@ -2,12 +2,14 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 WORKDIR /src
 
 # 複製專案檔並進行 NuGet 還原
-COPY ["ssoproxy.csproj", "."]
-RUN dotnet restore "ssoproxy.csproj"
+COPY ["ssoproxy/ssoproxy.csproj", "ssoproxy/"]
+COPY ["gd/gd.csproj", "gd/"]
+RUN dotnet restore "ssoproxy/ssoproxy.csproj"
 
 # 複製所有原始碼並進行編譯釋出
-COPY . .
-RUN dotnet publish "ssoproxy.csproj" -c Release -o /app/publish /p:UseAppHost=false
+COPY ssoproxy/ ./ssoproxy/
+COPY gd/ ./gd/
+RUN dotnet publish "ssoproxy/ssoproxy.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # 部署階段：使用 Alpine 確保最小足跡
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS final
