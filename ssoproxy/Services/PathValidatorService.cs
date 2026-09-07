@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using System.Text.RegularExpressions;
 
-namespace ssoproxy.Services;
+namespace ssoproxy.Services.Auth;
 
 public class PathValidatorService : IPathValidatorService
 {
@@ -11,9 +11,17 @@ public class PathValidatorService : IPathValidatorService
     private static readonly string[] SsoLoginPaths = new[]
     {
         "/Home/SsoLogin",
-        "/Home/SubmitSsoLogin",
+        "/Home/SubmitSsoLogin",        
+        "/Login/SubmitSsoLogin",
         "/api/Token",
         "/api/Token/"
+    };
+
+    private static readonly string[] StaticAssetPrefixes = new[]
+    {
+        "/css/",
+        "/js/",
+        "/lib/"
     };
 
     public PathValidatorService(IConfiguration configuration)
@@ -34,6 +42,11 @@ public class PathValidatorService : IPathValidatorService
 
         // 1. 優先檢查是否屬於登入相關綠色通道 (避免無窮重導向)
         if (SsoLoginPaths.Any(p => requestPath.Equals(p, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        if (StaticAssetPrefixes.Any(prefix => requestPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
         {
             return true;
         }

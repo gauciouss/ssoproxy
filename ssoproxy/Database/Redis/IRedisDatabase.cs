@@ -1,4 +1,4 @@
-namespace ssoproxy.Database;
+namespace ssoproxy.Database.Redis;
 
 public interface IRedisDatabase
 {

@@ -12,6 +12,12 @@ namespace gd.Core
 
         public string Message { get; set; }
 
+        public GDExCode()
+        {
+            Code = string.Empty;
+            Message = string.Empty;
+        }
+
         public GDExCode(string code, string message)
         {
             Code = code;
@@ -30,5 +36,6 @@ namespace gd.Core
         public static readonly GDExCode Conflict = new("99-008", "資料衝突");
         public static readonly GDExCode BadRequest = new("99-009", "錯誤的請求");
         public static readonly GDExCode NotImplemented =    new("99-010", "尚未實作的功能");
+        public static readonly GDExCode UnexpectedDataFormat = new("99-011", "資料格式不符合預期");
     }
 }

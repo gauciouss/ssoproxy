@@ -3,9 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>target-web2</title>
+  <title>Target Web 2</title>
 </head>
 <body>
-  <h1>hello world2</h1>
+  <h1>Target Web 2</h1>
+  <p id="status">Loading user information...</p>
+  <pre id="userInfo" aria-live="polite"></pre>
+
+  <script>
+    async function loadUserInfo() {
+      const status = document.getElementById("status");
+      const userInfo = document.getElementById("userInfo");
+      try {
+        const response = await fetch("/api/Auth/Me", { credentials: "same-origin" });
+        const result = await response.json();
+
+        if (!response.ok || !result.body) {
+          throw new Error(result.header?.message || result.header?.Message || "User information request failed.");
+        }
+
+        status.textContent = "Authenticated user:";
+        userInfo.textContent = JSON.stringify(result.body, null, 2);
+      } catch (error) {
+        status.textContent = `Unable to load user information: ${error.message}`;
+      }
+    }
+
+    loadUserInfo();
+  </script>
 </body>
 </html>

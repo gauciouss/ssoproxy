@@ -1,4 +1,4 @@
-namespace ssoproxy.Services;
+namespace ssoproxy.Services.Auth;
 
 public interface IPathValidatorService
 {

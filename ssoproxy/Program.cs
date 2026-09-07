@@ -10,7 +10,7 @@ using NLog.Web;
 var Logger = LogManager.Setup().LoadConfigurationFromFile("nlog.config").GetCurrentClassLogger();
 try
 {
-    Logger.Info("******* Application 啟動 *******");
+    Logger.Info("******* Application starting *******");
 
     var builder = WebApplication.CreateBuilder(args);
 
@@ -42,8 +42,16 @@ try
     // 將 IConnectionMultiplexer 注入到 DI，供 RedisDatabase 與其他需要的服務使用
     builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
     {
-        return ssoproxy.Database.RedisConnector.Connect(redisConnectionString);
+        return ssoproxy.Database.Redis.RedisConnector.Connect(redisConnectionString);
     });
+    builder.Services.AddSingleton<ssoproxy.Database.Redis.IRedisDatabase, ssoproxy.Database.Redis.RedisDatabase>();
+
+    // 4. 註冊 MySQL SSO DAO
+    builder.Services.AddSingleton<ssoproxy.Database.SqlConnectionFactory>();
+    builder.Services.AddSingleton<ssoproxy.Database.Sso.ISsoDao, ssoproxy.Database.Sso.SsoDao>();
+    builder.Services.AddSingleton<ssoproxy.Services.Auth.IPathValidatorService, ssoproxy.Services.Auth.PathValidatorService>();
+    builder.Services.AddSingleton<ssoproxy.Services.Auth.ILoginService, ssoproxy.Services.Auth.LoginService>();
+    builder.Services.AddSingleton<ssoproxy.Services.Auth.ITokenService, ssoproxy.Services.Auth.TokenService>();
 
     // 5. 註冊 YARP Reverse Proxy
     builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
@@ -57,13 +65,13 @@ try
     // 6. 全局防禦 Middleware (包含由 IPathValidatorService 處理的免檢驗過濾，以及 Token 驗證)
     app.UseMiddleware<GlobalDefenseMiddleware>();
 
-    // 設定 YARP Reverse Proxy 路由 (先處理 host-based 轉發)
-    app.MapReverseProxy();
-
-    // 設定 MVC 預設路由
+    // 設定 MVC 預設路由，優先處理登入頁等本機 Controller 路由
     app.MapControllerRoute(
         name: "default",
-        pattern: "{controller=Home}/{action=Index}/{id?}");
+        pattern: "Home/{action=Index}/{id?}");
+
+    // 設定 YARP Reverse Proxy 路由 (再處理 host-based 轉發)
+    app.MapReverseProxy();
 
     app.Run();
 }
@@ -74,6 +82,6 @@ catch (Exception ex)
 }
 finally
 {
-    Logger.Info("******* Application 正在關閉 *******");
+    Logger.Info("******* Application shutting down *******");
     LogManager.Shutdown();
 }

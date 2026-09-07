@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using ssoproxy.Models;
 using ssoproxy.Services;
+using ssoproxy.Services.Auth;
 using gd.Core;
 using gd.Util;
 using NLog;
@@ -16,10 +17,12 @@ public class TokenController : ControllerBase
 {
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     private readonly ILoginService _loginService;
+    private readonly IConfiguration _configuration;
 
-    public TokenController(ILoginService loginService)
+    public TokenController(ILoginService loginService, IConfiguration configuration)
     {
         _loginService = loginService;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -36,19 +39,28 @@ public class TokenController : ControllerBase
         try
         {
             var loginResult = await _loginService.AuthenticateAsync(request.Username, request.Password);
+            Response.Cookies.Append("sso_token", loginResult.Token!, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = Request.IsHttps,
+                SameSite = SameSiteMode.Lax,
+                Expires = DateTimeOffset.UtcNow.AddMinutes(loginResult.ExpiresInMinutes),
+                Path = "/",
+                Domain = GetCookieDomain()
+            });
             _logger.Info("[SSO_API_TOKEN_SUCCESS] User {Username} token created", request.Username);
 
             result = new ResponseEntity(
                 body: new { Token = loginResult.Token, ExpiresInMinutes = loginResult.ExpiresInMinutes },
                 code: GDExCode.Success.Code,
-                message: "Token 取得成功",
+                message: GDExCode.Success.Message,
                 execTime: 0);
         }
         catch (GDException ex)
         {
             result = new ResponseEntity(
                 body: null,
-                code: ex.ErrorCode ?? ex.ExceptionCode?.Code ?? "99-999",
+                code: ex.ErrorCode ?? ex.ExceptionCode?.Code ?? GDExCode.UnknownError.Code,
                 message: ex.Message,
                 execTime: 0);
 
@@ -59,5 +71,21 @@ public class TokenController : ControllerBase
         profiler.Stop();
         result.Header.ExecTime = profiler.ExecutionTime;
         return result;
+    }
+
+    private string? GetCookieDomain()
+    {
+        var configuredDomain = _configuration["SsoCookieDomain"]?.Trim();
+        if (string.IsNullOrWhiteSpace(configuredDomain))
+        {
+            return null;
+        }
+
+        var domain = configuredDomain.TrimStart('.');
+        var host = Request.Host.Host;
+        return host.Equals(domain, StringComparison.OrdinalIgnoreCase) ||
+               host.EndsWith($".{domain}", StringComparison.OrdinalIgnoreCase)
+            ? configuredDomain
+            : null;
     }
 }

@@ -1,6 +1,6 @@
 using StackExchange.Redis;
 
-namespace ssoproxy.Database;
+namespace ssoproxy.Database.Redis;
 
 public static class RedisConnector
 {
@@ -22,7 +22,7 @@ public static class RedisConnector
             catch (Exception ex)
             {
                 retryCount++;
-                Console.WriteLine($"[SSO_CONNECT_RETRY] Redis 連線失敗，第 {retryCount}/{maxRetries} 次重試... {ex.Message}");
+                Console.WriteLine($"[SSO_CONNECT_RETRY] Redis connection failed; retry {retryCount}/{maxRetries}... {ex.Message}");
                 if (retryCount >= maxRetries) throw;
                 Thread.Sleep(retryDelayMs);
             }

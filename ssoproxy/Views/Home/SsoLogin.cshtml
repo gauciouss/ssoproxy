@@ -18,7 +18,7 @@
             </div>
         }
 
-        <form id="loginForm" asp-controller="Home" asp-action="SubmitSsoLogin" method="post" onsubmit="return validateCaptcha(event)">
+        <form id="loginForm" action="/Login/SubmitSsoLogin" method="post" onsubmit="return validateCaptcha(event)">
             <!-- 帳號欄位 -->
             <div class="mb-3">
                 <label for="username" class="form-label fw-semibold">帳號</label>

@@ -1,6 +1,6 @@
 using ssoproxy.Models;
 
-namespace ssoproxy.Services;
+namespace ssoproxy.Services.Auth;
 
 /// <summary>
 /// 負責處理使用者登入驗證與 token 產生邏輯。

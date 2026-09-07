@@ -1,4 +1,4 @@
-namespace ssoproxy.Services;
+namespace ssoproxy.Services.Auth;
 
 public interface ITokenService
 {
@@ -9,4 +9,9 @@ public interface ITokenService
 
     // 從 Redis 移除 token
     Task<bool> RemoveTokenAsync(string token);
+
+    // 產生 JWE token
+    string GenerateJweToken(params string[] idno);
+
+
 }

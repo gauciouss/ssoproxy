@@ -7,7 +7,7 @@ using ssoproxy.Exceptions;
 using ssoproxy.Models;
 using gd.Core;
 
-namespace ssoproxy.Services;
+namespace ssoproxy.Services.Auth;
 
 /// <summary>
 /// 使用者登入服務，負責帳號驗證與 token 產生。
@@ -45,7 +45,7 @@ public class LoginService : ILoginService
 
         await _tokenService.AddTokenAsync(token, userJson, TimeSpan.FromMinutes(TokenExpiryMinutes));
 
-        _logger.Info("[SSO_LOGIN_SUCCESS] 使用者 {Username} 成功登入並產生 JWE token", username);
+        _logger.Info("[SSO_LOGIN_SUCCESS] User {Username} logged in successfully and JWE token was created", username);
 
         return new LoginResult
         {
