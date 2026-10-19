@@ -31,13 +31,13 @@ namespace gd.Util
 
         public string StartLog(string msg)
         {
-            return $"[Profiler] {msg} starttime: {StartTime} ms";
+            return $"[Profiler][START] {msg} START_TIME: {StartTime} ms";
         }
 
         public string StopLog(string msg)
         {
             Stop();
-            return $"[Profiler] {msg} endtime: {EndTime} ms, exectime: {ExecutionTime} ms";
+            return $"[Profiler][END] {msg} END_TIME: {EndTime} ms, EXEC_TIME: {ExecutionTime} ms";
         }
     }
 }

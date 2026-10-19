@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using gd.Core;
 using gd.Util;
 using Microsoft.AspNetCore.Mvc;
 using NLog;
@@ -51,7 +52,23 @@ public class HomeController : Controller
         }
 
         // 2. 使用 LoginService 進行帳號密碼驗證與 token 產生
-        var result = await _loginService.AuthenticateAsync(username, password);
+        LoginResult result;
+        try
+        {
+            result = await _loginService.AuthenticateAsync(username, password);
+        }
+        catch (GDException gdEx)
+        {
+            _logger.Warn(profiler.StopLog("[SSO_LOGIN_FAILURE] User {Username} login failed: {ErrorMessage}"), username, gdEx.Message);
+            TempData["ErrorMessage"] = gdEx.Message;
+            return RedirectToAction("SsoLogin", new { returnUrl });
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "[SSO_LOGIN_EXCEPTION] An error occurred during SSO login for user {Username}: {ErrorMessage}", username, ex.Message);
+            TempData["ErrorMessage"] = "登入過程中發生錯誤，請稍後再試！";
+            return RedirectToAction("SsoLogin", new { returnUrl });
+        }
 
         if (result.Success)
         {            

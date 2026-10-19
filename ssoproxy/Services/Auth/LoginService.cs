@@ -3,9 +3,9 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using NLog;
-using ssoproxy.Exceptions;
 using ssoproxy.Models;
 using gd.Core;
+using ssoproxy.Core;
 
 namespace ssoproxy.Services.Auth;
 
@@ -31,13 +31,13 @@ public class LoginService : ILoginService
     {
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
         {
-            throw new GDException(SsoproxyExCode.MissingCredentials);
+            throw new GDException(SsoProxyCode.MissingCredentials);
         }
 
         // TODO: 實際環境請改成呼叫身份驗證服務或資料庫帳密驗證
         if (username != "admin" || password != "admin123")
         {
-            throw new GDException(SsoproxyExCode.InvalidCredentials);
+            throw new GDException(SsoProxyCode.InvalidCredentials);
         }
 
         var token = GenerateJweToken(username);

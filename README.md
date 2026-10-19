@@ -240,3 +240,4 @@ curl -H 'Host: test2.gd.com' --cookie 'sso_token=<token>' http://127.0.0.1/index
 - [ssoproxy/appsettings.json](ssoproxy/appsettings.json)：YARP、Redis、MySQL 與白名單設定。
 - [docker-compose.yml](docker-compose.yml)：本機 PoC 服務拓撲。
 - [database-config/schema.sql](database-config/schema.sql)：資料庫 Schema。
+

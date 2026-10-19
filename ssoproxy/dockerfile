@@ -1,6 +1,13 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 WORKDIR /src
 
+# 安裝 busybox-extras 取得 telnet 工具
+RUN apk update && \
+    apk add --no-cache busybox-extras
+
+CMD ["sh"]
+
+
 # 複製專案檔並進行 NuGet 還原
 COPY ["ssoproxy/ssoproxy.csproj", "ssoproxy/"]
 COPY ["gd/gd.csproj", "gd/"]

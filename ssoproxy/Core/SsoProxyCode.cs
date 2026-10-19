@@ -18,6 +18,8 @@ namespace ssoproxy.Core
         public static readonly GDExCode InvalidCredentials = new("SSO-005", "帳號或密碼錯誤");
 
         public static readonly GDExCode RedisConnectionError = new("SSO-006", "Redis 連線異常，請稍後再試");
+
+        public static readonly GDExCode MissingCredentials = new("SSO-007", "帳號或密碼為空，請輸入有效的帳號與密碼");
         
     }
 }

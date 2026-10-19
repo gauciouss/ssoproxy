@@ -3,6 +3,9 @@ using ssoproxy.Services;
 using ssoproxy.Services.Auth;
 using ssoproxy.Database.Redis;
 using gd.Util;
+using gd.Core;
+using ssoproxy.Core;
+
 namespace ssoproxy.Middleware
 {
     /// <summary>
@@ -84,13 +87,20 @@ namespace ssoproxy.Middleware
                     context.Response.Redirect(loginUrl);
                 }
             }
+            catch(GDException gdEx)
+            {
+                Logger.Warn(profiler.StopLog("[SSO_GLOBAL_GDEXCEPTION] TraceId: {0}, GDException occurred, code: {1}, message: {2}"), traceId, gdEx.ErrorCode, gdEx.ExceptionMessage);
+                context.Response.StatusCode = 400;
+                context.Response.ContentType = "text/plain";
+                await context.Response.WriteAsync($"Bad Request: {gdEx.Message}");
+            }
             catch (Exception ex)
             {
-                Logger.Error(ex, "[SSO_GLOBAL_CRASH] TraceId: {0}, unexpected core failure", traceId);
+                Logger.Error(profiler.StopLog("[SSO_GLOBAL_CRASH] TraceId: {0}, unexpected core failure, exception: {1}"), traceId, ex.ToString());
                 context.Response.StatusCode = 500;
                 context.Response.ContentType = "text/plain";
                 await context.Response.WriteAsync($"Internal Server Error: {ex.Message}");
-            }
+            }            
         }
     }
 }

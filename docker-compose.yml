@@ -44,6 +44,8 @@ services:
       - SsoWhitelist=["^/target-web/health$"]
     volumes:
       - ./ssoproxy/logs:/app/logs
+      - ./ssoproxy/appSettings.json:/app/appsettings.json
+      - ./ssoproxy/nlog.config:/app/nlog.config
     depends_on:
       - sso-poc-sentinel1
       - sso-poc-sentinel2
@@ -57,6 +59,11 @@ services:
       retries: 12
       start_period: 10s
     restart: always
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./ssoproxy          
+          target: /app        
 
   sso-poc-proxy2:
     build:
@@ -72,6 +79,8 @@ services:
       - SsoWhitelist=["^/target-web/health$"]
     volumes:
       - ./ssoproxy/logs:/app/logs
+      - ./ssoproxy/appSettings.json:/app/appsettings.json
+      - ./ssoproxy/nlog.config:/app/nlog.config
     depends_on:
       - sso-poc-sentinel1
       - sso-poc-sentinel2
@@ -85,6 +94,12 @@ services:
       retries: 12
       start_period: 10s
     restart: always
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./ssoproxy
+          target: /app        
+
 
   # ========================================================
   # 後端儲存端與目標網頁系統 (維持不變)
