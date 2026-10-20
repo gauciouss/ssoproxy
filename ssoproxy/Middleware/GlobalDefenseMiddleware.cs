@@ -86,21 +86,14 @@ namespace ssoproxy.Middleware
                     Logger.Info(profiler.StopLog("[SSO_AUTH_FAIL] TraceId: {0}, token expired or not found; redirecting to the SSO login page, returnUrl={1}"), traceId, returnUrl);
                     context.Response.Redirect(loginUrl);
                 }
-            }
-            catch(GDException gdEx)
+            }                        
+            catch (Exception ex) when (ex is not GDException)
             {
-                Logger.Warn(profiler.StopLog("[SSO_GLOBAL_GDEXCEPTION] TraceId: {0}, GDException occurred, code: {1}, message: {2}"), traceId, gdEx.ErrorCode, gdEx.ExceptionMessage);
-                context.Response.StatusCode = 400;
-                context.Response.ContentType = "text/plain";
-                await context.Response.WriteAsync($"Bad Request: {gdEx.Message}");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(profiler.StopLog("[SSO_GLOBAL_CRASH] TraceId: {0}, unexpected core failure, exception: {1}"), traceId, ex.ToString());
+                Logger.Warn(profiler.StopLog("[SSO_GLOBAL_ERROR] TraceId: {0}, unexpected error occurred, exception: {1}"), traceId, ex.ToString());
                 context.Response.StatusCode = 500;
                 context.Response.ContentType = "text/plain";
                 await context.Response.WriteAsync($"Internal Server Error: {ex.Message}");
-            }            
+            }                        
         }
     }
 }

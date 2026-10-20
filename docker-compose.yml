@@ -46,6 +46,7 @@ services:
       - ./ssoproxy/logs:/app/logs
       - ./ssoproxy/appSettings.json:/app/appsettings.json
       - ./ssoproxy/nlog.config:/app/nlog.config
+      - ./ssoproxy/Views:/app/Views
     depends_on:
       - sso-poc-sentinel1
       - sso-poc-sentinel2
@@ -63,7 +64,17 @@ services:
       watch:
         - action: sync+restart
           path: ./ssoproxy          
-          target: /app        
+          target: /app      
+          ignore:
+            - "**/bin/**"
+            - "**/obj/**"
+            - "**/logs/**"
+            - "**/*.db"
+            - "**/*.md"
+            - "**/*.sln"
+            - "**/*.csproj"
+            - "**/*.user"
+            - "**/*.vsconfig"    
 
   sso-poc-proxy2:
     build:
@@ -81,6 +92,7 @@ services:
       - ./ssoproxy/logs:/app/logs
       - ./ssoproxy/appSettings.json:/app/appsettings.json
       - ./ssoproxy/nlog.config:/app/nlog.config
+      - ./ssoproxy/Views:/app/Views
     depends_on:
       - sso-poc-sentinel1
       - sso-poc-sentinel2
@@ -98,7 +110,17 @@ services:
       watch:
         - action: sync+restart
           path: ./ssoproxy
-          target: /app        
+          target: /app      
+          ignore:
+            - "**/bin/**"
+            - "**/obj/**"
+            - "**/logs/**"
+            - "**/*.db"
+            - "**/*.md"
+            - "**/*.sln"
+            - "**/*.csproj"
+            - "**/*.user"
+            - "**/*.vsconfig"  
 
 
   # ========================================================

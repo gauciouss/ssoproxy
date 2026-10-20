@@ -1,8 +1,8 @@
 using System.Diagnostics;
-using gd.Core;
 using gd.Util;
 using Microsoft.AspNetCore.Mvc;
 using NLog;
+using gd.Core;
 using ssoproxy.Models;
 using ssoproxy.Services;
 using ssoproxy.Services.Auth;
@@ -46,7 +46,7 @@ public class HomeController : Controller
         // 1. 後端進行圖形驗證碼二次校驗
         if (string.IsNullOrEmpty(captchaInput) || !captchaInput.Equals(captchaValue, StringComparison.OrdinalIgnoreCase))
         {            
-            TempData["ErrorMessage"] = "圖形驗證碼比對錯誤，請重新輸入！";
+            TempData["ErrorMessage"] = "圖形驗證碼比對錯誤，請重新輸入！";            
             _logger.Info(profiler.StopLog("[SSO_LOGIN_CAPTCHA_ERROR] CAPTCHA mismatch for user {Username} (captchaInput: {CaptchaInput}, captchaValue: {CaptchaValue}); please try again."), username, captchaInput, captchaValue);
             return RedirectToAction("SsoLogin", new { returnUrl });
         }
@@ -60,19 +60,19 @@ public class HomeController : Controller
         catch (GDException gdEx)
         {
             _logger.Warn(profiler.StopLog("[SSO_LOGIN_FAILURE] User {Username} login failed: {ErrorMessage}"), username, gdEx.Message);
-            TempData["ErrorMessage"] = gdEx.Message;
+            TempData["ErrorMessage"] = gdEx.Message;            
             return RedirectToAction("SsoLogin", new { returnUrl });
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "[SSO_LOGIN_EXCEPTION] An error occurred during SSO login for user {Username}: {ErrorMessage}", username, ex.Message);
-            TempData["ErrorMessage"] = "登入過程中發生錯誤，請稍後再試！";
+            TempData["ErrorMessage"] = "登入過程中發生錯誤，請稍後再試！";            
             return RedirectToAction("SsoLogin", new { returnUrl });
         }
 
         if (result.Success)
         {            
-            TempData["Token"] = result.Token;
+            TempData["Token"] = result.Token;            
             Response.Cookies.Append("sso_token", result.Token!, new CookieOptions
             {
                 HttpOnly = true,
