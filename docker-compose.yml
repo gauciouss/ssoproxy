@@ -55,7 +55,7 @@ services:
       sso-poc-secure-net:
         ipv4_address: 172.31.254.11
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:80/Home/SsoLogin || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/health || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -102,7 +102,7 @@ services:
       sso-poc-secure-net:
         ipv4_address: 172.31.254.12
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:80/Home/SsoLogin || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/health || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 12

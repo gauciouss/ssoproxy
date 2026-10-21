@@ -35,7 +35,9 @@ try
     var namespacesToScan = new[] { "ssoproxy.Services", "ssoproxy.Proxy", "ssoproxy.Database" }; // 這裡可以加入更多命名空間
     builder.Services.AddNamespaceComponents(namespacesToScan, ServiceLifetime.Singleton);
 
-
+    // 註冊 health check endpoint
+    builder.Services.AddHealthChecks();
+        
     // 3. 註冊 Redis 連線 (可依實際需求調整)
     var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
 
@@ -72,6 +74,12 @@ try
 
     // 設定 YARP Reverse Proxy 路由 (再處理 host-based 轉發)
     app.MapReverseProxy();
+
+    // 7. 註冊health check endpoint
+    app.MapHealthChecks("/health").AllowAnonymous();
+    app.MapControllerRoute(
+        name: "default",
+        pattern: "{controller=Home}/{action=Index}/{id?}");
 
     app.Run();
 }

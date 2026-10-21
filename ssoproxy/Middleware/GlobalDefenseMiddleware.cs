@@ -50,7 +50,7 @@ namespace ssoproxy.Middleware
 
                 if (pathValidator.IsBypassable(requestPath))
                 {
-                    Logger.Info("[SSO_BYPASS] TraceId: {0}, path {1} matches the bypass rules; request allowed", traceId, requestPath);
+                    Logger.Info(profiler.StopLog("Request processing completed successfully. TraceId: {0}, path: {1}"), traceId, requestPath);
                     await _next(context);
                     return;
                 }
@@ -66,7 +66,7 @@ namespace ssoproxy.Middleware
                     var returnUrl = $"{context.Request.Path}{context.Request.QueryString}";
                     var loginUrl = $"/Home/SsoLogin?returnUrl={Uri.EscapeDataString(returnUrl)}";
 
-                    Logger.Warn("[SSO_MISSING_TOKEN] TraceId: {0}, request has no authentication token; redirecting to the SSO login page, returnUrl={1}", traceId, returnUrl);
+                    Logger.Info(profiler.StopLog("[SSO_MISSING_TOKEN] TraceId: {0}, request has no authentication token; redirecting to the SSO login page, returnUrl={1}"), traceId, returnUrl);
                     context.Response.Redirect(loginUrl);
                     return;
                 }
