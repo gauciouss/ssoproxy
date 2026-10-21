@@ -22,9 +22,9 @@ services:
         ipv4_address: 172.31.254.10
     depends_on:
       sso-poc-proxy1:
-        condition: service_healthy
+        condition: service_healthy  #必須等到被依賴的服務（sso-poc-proxy1）的健康檢查（Healthcheck）狀態變成 healthy（健康）之後，Nginx 容器才會被啟動
       sso-poc-proxy2:
-        condition: service_healthy
+        condition: service_healthy  #必須等到被依賴的服務（sso-poc-proxy2）的健康檢查（Healthcheck）狀態變成 healthy（健康）之後，Nginx 容器才會被啟動
     restart: always
 
   # ========================================================
@@ -47,6 +47,7 @@ services:
       - ./ssoproxy/appSettings.json:/app/appsettings.json
       - ./ssoproxy/nlog.config:/app/nlog.config
       - ./ssoproxy/Views:/app/Views
+      - ./ssoproxy/keys:/root/.aspnet/DataProtection-Keys # 👈 加上這行，讓金鑰持久化存放在本機，並共用同一個實體資料夾
     depends_on:
       - sso-poc-sentinel1
       - sso-poc-sentinel2
@@ -93,6 +94,7 @@ services:
       - ./ssoproxy/appSettings.json:/app/appsettings.json
       - ./ssoproxy/nlog.config:/app/nlog.config
       - ./ssoproxy/Views:/app/Views
+      - ./ssoproxy/keys:/root/.aspnet/DataProtection-Keys # 👈 加上這行，讓金鑰持久化存放在本機，並共用同一個實體資料夾，並共用同一個實體資料夾
     depends_on:
       - sso-poc-sentinel1
       - sso-poc-sentinel2
