@@ -36,11 +36,11 @@ services:
       dockerfile: ./ssoproxy/dockerfile
     container_name: sso-poc-proxy-1
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Development  # 指定環境，以便讀取 appsettings.Development.json 配置檔
       - ASPNETCORE_URLS=http://+:80
       - SSOPROXY_CONTAINER_NAME=sso-poc-proxy-1
       - SsoCookieDomain=.gd.com
-      - ConnectionStrings__Redis=sso-poc-sentinel1:26379,sso-poc-sentinel2:26379,password=YourStrongPassword,serviceName=mymaster,abortConnect=false
+      - ConnectionStrings__Redis=sso-poc-sentinel1:26379,sso-poc-sentinel2:26379,password=jrlbqisuPGkF2qOP,serviceName=mymaster,abortConnect=false
       - SsoWhitelist=["^/target-web/health$"]
     volumes:
       - ./ssoproxy/logs:/app/logs
@@ -83,11 +83,11 @@ services:
       dockerfile: ./ssoproxy/dockerfile
     container_name: sso-poc-proxy-2
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Development  # 指定環境，以便讀取 appsettings.Development.json 配置檔
       - ASPNETCORE_URLS=http://+:80
       - SSOPROXY_CONTAINER_NAME=sso-poc-proxy-2
       - SsoCookieDomain=.gd.com
-      - ConnectionStrings__Redis=sso-poc-sentinel1:26379,sso-poc-sentinel2:26379,password=YourStrongPassword,serviceName=mymaster,abortConnect=false
+      - ConnectionStrings__Redis=sso-poc-sentinel1:26379,sso-poc-sentinel2:26379,password=jrlbqisuPGkF2qOP,serviceName=mymaster,abortConnect=false
       - SsoWhitelist=["^/target-web/health$"]
     volumes:
       - ./ssoproxy/logs:/app/logs
@@ -131,7 +131,7 @@ services:
   sso-poc-redis-master:
     image: redis:7.2-alpine
     container_name: sso-poc-redis-master
-    command: redis-server --appendonly yes --requirepass YourStrongPassword --masterauth YourStrongPassword
+    command: redis-server --appendonly yes --requirepass jrlbqisuPGkF2qOP --masterauth jrlbqisuPGkF2qOP
     networks:
       - sso-poc-secure-net
     restart: always
@@ -139,7 +139,7 @@ services:
   sso-poc-redis-slave:
     image: redis:7.2-alpine
     container_name: sso-poc-redis-slave
-    command: redis-server --replicaof sso-poc-redis-master 6379 --appendonly yes --requirepass YourStrongPassword --masterauth YourStrongPassword
+    command: redis-server --replicaof sso-poc-redis-master 6379 --appendonly yes --requirepass jrlbqisuPGkF2qOP --masterauth jrlbqisuPGkF2qOP
     depends_on:
       - sso-poc-redis-master
     networks:
@@ -178,21 +178,21 @@ services:
       - sso-poc-secure-net
     restart: always
 
-  sso-poc-mysql:
-    image: mysql:8.0
-    container_name: sso-poc-mysql
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_DATABASE: sso
-      MYSQL_USER: sso
-      MYSQL_PASSWORD: 12345678
-      MYSQL_ROOT_PASSWORD: 12345678
-    volumes:
-      - mysql-data:/var/lib/mysql
-    networks:
-      - sso-poc-secure-net
-    restart: always
+  #sso-poc-mysql:
+  #  image: mysql:8.0
+  #  container_name: sso-poc-mysql
+  #  ports:
+  #    - "3306:3306"
+  #  environment:
+  #    MYSQL_DATABASE: sso
+  #    MYSQL_USER: sso
+  #    MYSQL_PASSWORD: 12345678
+  #    MYSQL_ROOT_PASSWORD: 12345678
+  #  volumes:
+  #    - mysql-data:/var/lib/mysql
+  #  networks:
+  #    - sso-poc-secure-net
+  #  restart: always
 
   sso-poc-target-web1:
     image: nginx:alpine
@@ -215,6 +215,3 @@ services:
     networks:
       - sso-poc-secure-net
     restart: always
-
-volumes:
-  mysql-data:

@@ -6,7 +6,7 @@ using System.Data;
 using System.Data.Common;
 using System.Reflection;
 
-namespace ssoproxy.Database
+namespace ssoproxy.Repository
 {
     public abstract class DaoTemplate : IDaoTemplate
     {

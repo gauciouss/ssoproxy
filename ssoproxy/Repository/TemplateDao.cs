@@ -2,10 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using MySqlConnector;
+using Microsoft.Data.SqlClient;
 
-
-namespace ssoproxy.Database
+namespace ssoproxy.Repository
 {
     public abstract class TemplateDao<T> where T : class
     {
@@ -14,17 +13,11 @@ namespace ssoproxy.Database
 
         public TemplateDao(IConfiguration configuration, ILogger<TemplateDao<T>> logger)
         {
-            _connectionString = configuration.GetConnectionString("MySql")
-                ?? throw new InvalidOperationException("Missing MySql connection string.");
+            _connectionString = configuration.GetConnectionString("MSSQL")
+                ?? throw new InvalidOperationException("Missing MSSQL connection string.");
             _logger = logger;
         }
 
-        
-    
-
-
-        
-        protected abstract MySqlConnection CreateConnection(string connectionString);
-        
+        protected abstract SqlConnection CreateConnection(string connectionString);
     }
 }

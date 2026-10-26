@@ -1,5 +1,5 @@
 using gd.Core;
-using ssoproxy.Database.Redis;
+using ssoproxy.Repository.Redis;
 using NLog;
 
 namespace ssoproxy.Services.Auth;

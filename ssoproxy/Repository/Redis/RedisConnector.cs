@@ -1,6 +1,6 @@
 using StackExchange.Redis;
 
-namespace ssoproxy.Database.Redis;
+namespace ssoproxy.Repository.Redis;
 
 public static class RedisConnector
 {

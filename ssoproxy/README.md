@@ -20,62 +20,52 @@
 
 ### 2.1 混合架構生命週期時序圖 (UML Sequence)
 
-```@startuml
-autonumber
-skinparam BoxPadding 10
-skinparam ParticipantPadding 10
+```mermaid
+sequenceDiagram
+    autonumber
+    actor App as "非網頁系統 (App/Client)"
+    actor Webview as "內嵌 Webview (瀏覽器元件)"
+    box rgba(173,216,230,0.6) SSO Proxy 邊緣防禦牆
+        participant Proxy as "SSO Proxy"
+        participant Redis as "Redis (Token 狀態庫)"
+    end
+    participant TargetWeb as "被保護的網頁系統 (Target Web)"
 
-actor "非網頁系統 (App/Client)" as App
-actor "內嵌 Webview (瀏覽器元件)" as Webview
+    Note over App,Proxy: 階段一：App 初始登入取得 8hr Token
+    App->>Proxy: 1. 帳密/API Key 認證
+    Proxy->>Redis: 2. 產製 Token 識別碼並存入 Redis (效期 8hr, 綁定來源特徵)
+    Proxy-->>App: 3. 回傳 8hr 有效的 Token (可以是加密的 JWE)
 
-box "SSO Proxy 邊緣防禦牆" #LightBlue
-    participant "SSO Proxy" as Proxy
-    database "Redis (Token 狀態庫)" as Redis
-end box
+    Note over App,TargetWeb: 階段二：透過 Webview 開啟被保護網頁 (8hr 內無限次)
+    App->>Webview: 4. 喚起 Webview 並注入 HTTP Header<br/>[Authorization: Bearer <8hr_Token>]
+    Webview->>Proxy: 5. 發送網頁請求 (帶著 8hr_Token)
 
-participant "被保護的網頁系統 (Target Web)" as TargetWeb
+    activate Proxy
+    Proxy->>Proxy: 6. 基礎檢查 (Token 未變造)
 
-== 階段一：App 初始登入取得 8hr Token ==
-App -> Proxy: 1. 帳密/API Key 認證
-Proxy -> Redis: 2. 產製 Token 識別碼並存入 Redis (效期 8hr, 綁定來源特徵)
-Proxy --> App: 3. 回傳 8hr 有效的 Token (可以是加密的 JWE)
+    Note over Proxy,Redis: 核心防禦：邊緣驗證與個資轉換
+    Proxy->>Redis: 7. 查詢此 Token 是否有效？是否被註銷？
+    activate Redis
+    Redis-->>Proxy: 8. 回傳：[有效] + 該用戶的登入個資 (JSON)
+    deactivate Redis
 
-== 階段二：透過 Webview 開啟被保護網頁 (8hr 內無限次) ==
-App -> Webview: 4. 喚起 Webview 並注入 HTTP Header\n[Authorization: Bearer <8hr_Token>]
-Webview -> Proxy: 5. 發送網頁請求 (帶著 8hr_Token)
+    Proxy->>Proxy: 9. 抹除原始 Token Header<br/>將個資轉換注入新 Header (e.g., X-User-Info: {個資...})
+    Proxy->>TargetWeb: 10. 將請求轉發 (帶著明文個資 Header)
+    activate TargetWeb
+    TargetWeb->>TargetWeb: 11. 讀取 X-User-Info (免寫登入邏輯，直接顯示個資頁)
+    TargetWeb-->>Proxy: 12. 回傳網頁 HTML/Data
+    deactivate TargetWeb
+    Proxy-->>Webview: 13. 回傳網頁畫面給 Webview 渲染
+    deactivate Proxy
 
-Activate Proxy
-Proxy -> Proxy: 6. 基礎檢查 (Token 未變造)
-
-	== 核心防禦：邊緣驗證與個資轉換 ==
-	Proxy -> Redis: 7. 查詢此 Token 是否有效？是否被註銷？
-	Activate Redis
-	Redis --> Proxy: 8. 回傳：[有效] + 該用戶的登入個資 (JSON)
-	Deactivate Redis
-
-Proxy -> Proxy: 9. 抹除原始 Token Header\n將個資轉換注入新 Header ( e.g., X-User-Info: {個資...} )
-
-Proxy -> TargetWeb: 10. 將請求轉發 (帶著明文個資 Header)
-Activate TargetWeb
-TargetWeb -> TargetWeb: 11. 讀取 X-User-Info (免寫登入邏輯，直接顯示個資頁)
-TargetWeb --> Proxy: 12. 回傳網頁 HTML/Data
-Deactivate TargetWeb
-
-Proxy --> Webview: 13. 回傳網頁畫面給 Webview 渲染
-Deactivate Proxy
-
-== 階段三：資安介入/離職註銷 ==
-... 8小時內，管理員發現異常或用戶登出 ...
-Proxy -> Redis: 14. 註銷/刪除該 Token 的快取紀錄
-...
-Webview -> Proxy: 15. 下一次點擊網頁 (帶著已被註銷的 Token)
-Activate Proxy
-Proxy -> Redis: 16. 查詢
-Redis --> Proxy: 17. 回傳：[已失效/不存在]
-Proxy --> Webview: 18. 拒絕存取，重導向至系統錯誤或登入頁 (401/302)
-Deactivate Proxy
-@enduml
-
+    Note over Proxy,Webview: 階段三：登出/Token過期
+    Proxy->>Redis: 14. 註銷/刪除該 Token 的快取紀錄
+    Webview->>Proxy: 15. 下一次點擊網頁 (帶著已被註銷的 Token)
+    activate Proxy
+    Proxy->>Redis: 16. 查詢
+    Redis-->>Proxy: 17. 回傳：[已失效/不存在]
+    Proxy-->>Webview: 18. 拒絕存取，重導向至系統錯誤或登入頁 (401/302)
+    deactivate Proxy
 ```
 ### 2.2 邊緣防禦核心邏輯 (Data Flow)
 1. 攔截（Intercept）：SSO Proxy 在邊緣攔截所有 /target-web/* 的 HTTP 請求。
@@ -254,7 +244,7 @@ services:
       - "8081:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__Redis=sentinel-1:26379,sentinel-2:26379,password=YourStrongPassword,serviceName=mymaster,abortConnect=false
+      - ConnectionStrings__Redis=sentinel-1:26379,sentinel-2:26379,password=jrlbqisuPGkF2qOP,serviceName=mymaster,abortConnect=false
     depends_on:
       - sentinel-1
       - sentinel-2
@@ -271,7 +261,7 @@ services:
       - "8082:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__Redis=sentinel-1:26379,sentinel-2:26379,password=YourStrongPassword,serviceName=mymaster,abortConnect=false
+      - ConnectionStrings__Redis=sentinel-1:26379,sentinel-2:26379,password=jrlbqisuPGkF2qOP,serviceName=mymaster,abortConnect=false
     depends_on:
       - sentinel-1
       - sentinel-2
@@ -282,7 +272,7 @@ services:
   redis-master:
     image: redis:7.2-alpine
     container_name: local-redis-master
-    command: redis-server --appendonly yes --requirepass YourStrongPassword --masterauth YourStrongPassword
+    command: redis-server --appendonly yes --requirepass jrlbqisuPGkF2qOP --masterauth jrlbqisuPGkF2qOP
     ports:
       - "6379:6379"
     networks:
@@ -292,7 +282,7 @@ services:
   redis-slave:
     image: redis:7.2-alpine
     container_name: local-redis-slave
-    command: redis-server --replicaof redis-master 6379 --appendonly yes --requirepass YourStrongPassword --masterauth YourStrongPassword
+    command: redis-server --replicaof redis-master 6379 --appendonly yes --requirepass jrlbqisuPGkF2qOP --masterauth jrlbqisuPGkF2qOP
     ports:
       - "6380:6379"
     depends_on:
@@ -349,7 +339,7 @@ services:
 ### 5.1 正常訪問驗證
 1. 進入 redis-master 容器寫入快取憑證：
 ```
-docker exec -it local-redis-master redis-cli -a YourStrongPassword
+docker exec -it local-redis-master redis-cli -a jrlbqisuPGkF2qOP
 SET my_8hr_test_token "{\"uid\":\"A123456789\",\"name\":\"何立偉\"}" EX 28800
 ```
 
@@ -365,6 +355,40 @@ docker stop local-redis-master
 2. 觀測 docker logs local-sentinel-1。在 5 秒（down-after-milliseconds）後，哨兵集群會自動觸發投票機制。
 3. 預期結果：local-redis-slave 被成功提拔為新 Master。此時再次發送網頁請求，Proxy 透過 abortConnect=false 參數與連線重試邏輯，在不崩潰、不中斷請求的前提下，自動在背景無縫飄移連線至新 Master。
 
+### 5.3 redis sentinel 說明
+Redis Sentinel（哨兵） 是 Redis 官方提供的高可用性（High Availability, HA）解決方案。當你使用 Redis 的主從複製（Master-Slave Replication）架構時，如果主節點（Master）因為當機、網路中斷或其他原因掛掉，系統需要有人來監控、自動進行故障轉移（Failover），而這正是 Redis Sentinel 的核心職責。
+
+1. Redis Sentinel 的核心功能   
+    1. 監控（Monitoring）：
+      Sentinel 系統會不間斷地檢查你的主節點（Master）與從節點（Slave/Replica）是否運作正常。
+
+    2. 自動故障轉移（Automatic Failover）：
+      當 Sentinel 偵測到 Master 掛掉時，它會自動發起投票，並在眾多從節點中選出一個新的 Master，升格為主節點。
+
+    3. 配置提供者（Configuration Provider）：
+      客戶端（Client）連接 Redis 時，不再直接連接固定的 IP，而是連接 Sentinel。Sentinel 會告訴客戶端目前真正的 Master 是誰。當發生故障轉移後，Sentinel 會把最新的主節點資訊通知給客戶端。
+
+    4. 通知（Notification）：
+      Sentinel 可以透過 API 向系統管理員或其他應用程式發送警告通知（例如某個 Redis 節點掛了）。
+
+2. 運作原理與架構
+    1. 分散式架構：Sentinel 本身通常也是以叢集方式運行（建議至少部署 3 個 奇數個實例），避免單點故障。
+    2. 共識機制（Quorum）：
+       - 主觀下線（SDOWN - Subjectively Down）：單個 Sentinel 發現某個節點沒有回應心跳包（Ping），就會認為它「主觀下線」。
+       - 客觀下線（ODOWN - Objectively Down）：當足夠數量（達到設定的 Quorum 值）的 Sentinel 都認為該主節點掛了，才會確認為「客觀下線」，並啟動故障轉移程序。
+       - 接著，Sentinel 之間會選舉出一個「領頭 Sentinel」（Leader）來執行實際的故障轉移操作。
+
+3. 優點與侷限性
+    1. 優點：
+       - 實現自動化高可用，減少人為介入的時間（減少停機時間）。
+       - 架構相對簡單，官方原生支援。
+    2. 侷限性（注意點）：
+       - 資料一致性：Redis 的複製是非同步的（Asynchronous），如果在 Master 掛掉時有些資料還沒來得及同步到 Slave，升格後的新 Master 可能會遺失這部分資料。
+       - 容量擴展：Sentinel 主要解決的是「高可用（可用性）」，並沒有解決「單機記憶體容量有限」的問題。如果需要水平擴展（Sharding），應使用 Redis Cluster。
+  
+  
+
+  
 
 
 

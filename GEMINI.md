@@ -146,7 +146,7 @@ docker-compose logs -f
 ### Network Topology Ports (Simulated PoC):
 * **F5 Load Balancer Gateway**: Exposes port `9999` to physical workstation. Direct your browser or native webview to `http://test1.gd.com:9999/` or `http://test2.gd.com:9999/` (ensure local hosts file maps these to `127.0.0.1`).
 * **SSO Proxy Nodes**: Listen internally inside the safe network bridge `172.31.254.0/24` (IPs: `.11`, `.12`) on port `80`.
-* **Redis Master/Slave Pool**: Redis Master at `.15`, Slave at `.16` with password `YourStrongPassword`.
+* **Redis Master/Slave Pool**: Redis Master at `.15`, Slave at `.16` with password `jrlbqisuPGkF2qOP`.
 * **Redis Sentinels**: Listen on `.21` and `.22` at port `26379`.
 
 ---

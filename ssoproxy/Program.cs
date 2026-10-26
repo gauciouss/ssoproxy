@@ -1,6 +1,6 @@
 using StackExchange.Redis;
 using System.Text.Json;
-using ssoproxy.Database;
+using ssoproxy.Repository.Redis;
 using ssoproxy.Services;
 using ssoproxy.Proxy;
 using ssoproxy.Middleware;
@@ -32,7 +32,7 @@ try
     builder.Services.AddHttpClient();
 
     // 2. 一行程式碼動態掃描並註冊該命名空間下所有的 Service 類別
-    var namespacesToScan = new[] { "ssoproxy.Services", "ssoproxy.Proxy", "ssoproxy.Database" }; // 這裡可以加入更多命名空間
+    var namespacesToScan = new[] { "ssoproxy.Services", "ssoproxy.Proxy", "ssoproxy.Repository" }; // 這裡可以加入更多命名空間
     builder.Services.AddNamespaceComponents(namespacesToScan, ServiceLifetime.Singleton);
 
     // 註冊 health check endpoint
@@ -44,13 +44,13 @@ try
     // 將 IConnectionMultiplexer 注入到 DI，供 RedisDatabase 與其他需要的服務使用
     builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
     {
-        return ssoproxy.Database.Redis.RedisConnector.Connect(redisConnectionString);
+        return ssoproxy.Repository.Redis.RedisConnector.Connect(redisConnectionString);
     });
-    builder.Services.AddSingleton<ssoproxy.Database.Redis.IRedisDatabase, ssoproxy.Database.Redis.RedisDatabase>();
+    builder.Services.AddSingleton<ssoproxy.Repository.Redis.IRedisDatabase, ssoproxy.Repository.Redis.RedisDatabase>();
 
     // 4. 註冊 MySQL SSO DAO
-    builder.Services.AddSingleton<ssoproxy.Database.SqlConnectionFactory>();
-    builder.Services.AddSingleton<ssoproxy.Database.Sso.ISsoDao, ssoproxy.Database.Sso.SsoDao>();
+    builder.Services.AddSingleton<ssoproxy.Repository.SqlConnectionFactory>();
+    builder.Services.AddSingleton<ssoproxy.Repository.Sso.ISsoDao, ssoproxy.Repository.Sso.SsoDao>();
     builder.Services.AddSingleton<ssoproxy.Services.Auth.IPathValidatorService, ssoproxy.Services.Auth.PathValidatorService>();
     builder.Services.AddSingleton<ssoproxy.Services.Auth.ILoginService, ssoproxy.Services.Auth.LoginService>();
     builder.Services.AddSingleton<ssoproxy.Services.Auth.ITokenService, ssoproxy.Services.Auth.TokenService>();

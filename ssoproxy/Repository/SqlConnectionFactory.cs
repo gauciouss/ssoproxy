@@ -1,8 +1,8 @@
 using System.Data.Common;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
-using MySqlConnector;
 
-namespace ssoproxy.Database;
+namespace ssoproxy.Repository;
 
 public sealed class SqlConnectionFactory
 {
@@ -14,16 +14,17 @@ public sealed class SqlConnectionFactory
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _providerFactories = new Dictionary<string, Func<string, DbConnection>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["mysql"] = connectionString => new MySqlConnection(connectionString),
-            ["mysqll"] = connectionString => new MySqlConnection(connectionString)
+            ["mssql"] = connectionString => new SqlConnection(connectionString),
+            ["sqlserver"] = connectionString => new SqlConnection(connectionString),
+            ["system.data.sqlclient"] = connectionString => new SqlConnection(connectionString)
         };
     }
 
     public DbConnection CreateConnection(string? connectionName = null)
     {
-        var effectiveName = string.IsNullOrWhiteSpace(connectionName) ? "MySql" : connectionName;
+        var effectiveName = string.IsNullOrWhiteSpace(connectionName) ? "MSSQL" : connectionName;
         var connectionString = GetConnectionString(effectiveName);
-        var providerName = _configuration[$"ConnectionStrings:{effectiveName}:Provider"] ?? "mysql";
+        var providerName = _configuration[$"ConnectionStrings:{effectiveName}:Provider"] ?? "mssql";
 
         if (!_providerFactories.TryGetValue(providerName, out var factory))
         {
@@ -35,7 +36,7 @@ public sealed class SqlConnectionFactory
 
     public string GetConnectionString(string? connectionName = null)
     {
-        var effectiveName = string.IsNullOrWhiteSpace(connectionName) ? "MySql" : connectionName;
+        var effectiveName = string.IsNullOrWhiteSpace(connectionName) ? "MSSQL" : connectionName;
         var connectionString = _configuration.GetConnectionString(effectiveName);
 
         if (string.IsNullOrWhiteSpace(connectionString))

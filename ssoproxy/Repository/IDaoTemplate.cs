@@ -4,7 +4,7 @@ using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace ssoproxy.Database
+namespace ssoproxy.Repository
 {
     public interface IDaoTemplate
     {

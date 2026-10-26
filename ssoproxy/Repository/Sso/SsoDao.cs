@@ -1,8 +1,7 @@
 using System.Data.Common;
 using Microsoft.Extensions.Logging;
-using MySqlConnector;
 
-namespace ssoproxy.Database.Sso;
+namespace ssoproxy.Repository.Sso;
 
 public sealed class SsoDao : ISsoDao
 {
@@ -25,7 +24,7 @@ public sealed class SsoDao : ISsoDao
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync();
 
-        const string sql = "SELECT terminated_sso_url FROM sso_config WHERE sso_name = @ssoName LIMIT 1";
+        const string sql = "SELECT TOP 1 terminated_sso_url FROM sso_config WHERE sso_name = @ssoName";
         await using var command = connection.CreateCommand();
         command.CommandText = sql;
 

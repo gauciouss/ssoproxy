@@ -1,7 +1,7 @@
 using NLog;
 using ssoproxy.Services;
 using ssoproxy.Services.Auth;
-using ssoproxy.Database.Redis;
+using ssoproxy.Repository.Redis;
 using gd.Util;
 using gd.Core;
 using ssoproxy.Core;
