@@ -43,8 +43,20 @@ namespace ssoproxy.Repository.Sso
         /// <value></value>
         public bool IsTerminated {get; set;} = true;
 
+        /// <summary>
+        /// 獲取或設置創建時間
+        /// </summary>
+        /// <value></value>
         public DateTime CreatedAt {get; set;} = DateTime.Now;
 
+        /// <summary>
+        /// 獲取或設置更新時間
+        /// </summary>
+        /// <value></value>
         public DateTime UpdatedAt {get; set;} = DateTime.Now;
+
+        public List<SsoWhiteFilter> WhiteFilters { get; set; } = new List<SsoWhiteFilter>();
     }
+
+    
 }

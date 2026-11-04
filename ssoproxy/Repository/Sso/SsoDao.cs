@@ -13,17 +13,21 @@ public sealed class SsoDao : ISsoDao
         _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));        
     }
 
-    public async Task<SsoProxyTarget> GetSsoProxyTargetAsync(string systemName)
+    public async Task<List<SsoProxyTarget>> GetSsoProxyTargetAsync(string systemName)
     {
         if (string.IsNullOrWhiteSpace(systemName))
         {
-            return new SsoProxyTarget();
+            return new List<SsoProxyTarget>();
         }
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync();
         
-        const string sql = "SELECT * FROM SSO_PROXY_TARGET WHERE SYSTEM_NAME LIKE @systemName";
+        const string sql = @"
+            SELECT * FROM SSO_PROXY_TARGET                 
+                LEFT JOIN SSO_WHITE_FILTER ON SSO_PROXY_TARGET.HOST_ID = SSO_WHITE_FILTER.HOST_ID
+            WHERE SYSTEM_NAME LIKE @systemName
+        ";
         await using var command = connection.CreateCommand();
         command.CommandText = sql;
 
@@ -32,26 +36,42 @@ public sealed class SsoDao : ISsoDao
         parameter.Value = systemName;
         command.Parameters.Add(parameter);
 
-        var result = await command.ExecuteScalarAsync();
-        if(result != null && result != DBNull.Value)
+        var targetDictionary = new Dictionary<string, SsoProxyTarget>();
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
         {
-            var ssoProxyTarget = new SsoProxyTarget
+            var hostId = reader.GetString(reader.GetOrdinal("HOST_ID"));
+            if (!targetDictionary.TryGetValue(hostId, out var ssoProxyTarget))
             {
-                HostId = (string)result,
-                Host = (string)result,
-                ReverseProxyHost = (string)result,
-                Order = (int)result,
-                SystemName = (string)result,
-                IsTerminated = (bool)result,
-                CreatedAt = (DateTime)result,
-                UpdatedAt = (DateTime)result
-            };
-            return ssoProxyTarget;
+                ssoProxyTarget = new SsoProxyTarget
+                {
+                    HostId = hostId,
+                    Host = reader.GetString(reader.GetOrdinal("HOST")),
+                    ReverseProxyHost = reader.GetString(reader.GetOrdinal("REVERSE_PROXY_HOST")),
+                    Order = reader.GetInt32(reader.GetOrdinal("ORDER")),
+                    SystemName = reader.GetString(reader.GetOrdinal("SYSTEM_NAME")),
+                    IsTerminated = reader.GetBoolean(reader.GetOrdinal("IS_TERMINATED")),
+                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CREATED_AT")),
+                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UPDATED_AT"))
+                };
+                targetDictionary[hostId] = ssoProxyTarget;
+            }
+
+            if (!reader.IsDBNull(reader.GetOrdinal("FILTER_PATH")))
+            {
+                var whiteFilter = new SsoWhiteFilter
+                {
+                    HostId = hostId,
+                    WhiteListId = reader.GetInt32(reader.GetOrdinal("WHITE_LIST_ID")),
+                    FilterPath = reader.GetString(reader.GetOrdinal("FILTER_PATH")),
+                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CREATED_AT")),
+                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UPDATED_AT"))
+                };
+                ssoProxyTarget.WhiteFilters.Add(whiteFilter);
+            }
         }
-        else
-        {
-            return new SsoProxyTarget();
-        }
+
+        return targetDictionary.Values.ToList();        
     }
 
     
@@ -60,7 +80,10 @@ public sealed class SsoDao : ISsoDao
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync();
 
-        const string sql = "SELECT * FROM SSO_PROXY_TARGET";
+        const string sql = @"
+            SELECT * FROM SSO_PROXY_TARGET                 
+                LEFT JOIN SSO_WHITE_FILTER ON SSO_PROXY_TARGET.HOST_ID = SSO_WHITE_FILTER.HOST_ID            
+        ";
         await using var command = connection.CreateCommand();
         command.CommandText = sql;
         await using var reader = await command.ExecuteReaderAsync();
@@ -83,4 +106,5 @@ public sealed class SsoDao : ISsoDao
         }
         return ssoProxyTargets;
     }
+
 }
