@@ -3,7 +3,7 @@ CREATE TABLE SSO_PROXY_TARGET (
     HOST_ID VARCHAR(50) PRIMARY KEY,   -- HOST_ID 為主鍵，唯一標識每個目標主機
     HOST VARCHAR(MAX) UNIQUE NOT NULL, -- HOST 為目標主機的域名或 IP 地址，必須唯一且不可為空
     REVERSE_PROXY_HOST VARCHAR(MAX) NOT NULL,  -- REVERSE_PROXY_HOST 為反向代理的主機名稱或 IP 地址，必須不可為空
-    ORDER INT NOT NULL, -- ORDER 為目標主機的排序，用於決定請求的處理順序
+    ORDER_NO INT NOT NULL, -- ORDER 為目標主機的排序，用於決定請求的處理順序
     SYSTEM_NAME NVARCHAR(MAX) NOT NULL, -- SYSTEM_NAME 為目標主機所屬的系統名稱
     IS_TERMINATED BOOLEAN DEFAULT TRUE, -- 設定預設值為 TRUE，表示預設情況下該目標是受保護的，會檢查 SSO Token是否合法；FALSE則不會檢查 SSO Token是否合法，直接允許訪問
     CREATED_AT TIMESTAMP,

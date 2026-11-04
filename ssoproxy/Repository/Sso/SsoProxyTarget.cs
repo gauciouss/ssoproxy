@@ -29,7 +29,7 @@ namespace ssoproxy.Repository.Sso
         /// ORDER 為目標主機的排序，用於決定請求的處理順序
         /// </summary>
         /// <value></value>
-        public int Order {get; set;}
+        public int OrderNo {get; set;}
 
         /// <summary>
         /// SYSTEM_NAME 為目標主機所屬的系統名稱
