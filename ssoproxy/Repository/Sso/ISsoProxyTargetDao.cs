@@ -11,7 +11,7 @@ namespace ssoproxy.Repository.Sso
         /// 取得所有 SSO Proxy Target
         /// </summary>
         /// <returns></returns>
-        public Task<List<SsoProxyTarget>> GetAllSsoProxyTargets();
+        public Task<List<SsoProxyTarget>> GetAllEnabledSsoProxyTargets();
 
         /// <summary>
         /// 根據系统名稱取得 SSO Proxy Target

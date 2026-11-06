@@ -6,6 +6,7 @@ CREATE TABLE SSO_PROXY_TARGET (
     ORDER_NO INT NOT NULL, -- ORDER 為目標主機的排序，用於決定請求的處理順序
     SYSTEM_NAME NVARCHAR(MAX) NOT NULL, -- SYSTEM_NAME 為目標主機所屬的系統名稱
     IS_TERMINATED BOOLEAN DEFAULT TRUE, -- 設定預設值為 TRUE，表示預設情況下該目標是受保護的，會檢查 SSO Token是否合法；FALSE則不會檢查 SSO Token是否合法，直接允許訪問
+    IS_ENABLED BOOLEAN DEFAULT TRUE, -- 設定預設值為 TRUE，表示預設情況下該目標是啟用的；FALSE則表示該目標是停用的
     CREATED_AT TIMESTAMP,
     UPDATED_AT TIMESTAMP
 );

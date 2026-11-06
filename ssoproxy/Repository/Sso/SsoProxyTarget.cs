@@ -44,6 +44,12 @@ namespace ssoproxy.Repository.Sso
         public bool IsTerminated {get; set;} = true;
 
         /// <summary>
+        /// IS_ENABLED 表示該目標是否啟用，TRUE 表示啟用，FALSE 表示停用
+        /// </summary>
+        /// <value></value>
+        public bool IsEnabled {get; set;} = true;
+
+        /// <summary>
         /// 獲取或設置創建時間
         /// </summary>
         /// <value></value>

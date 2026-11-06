@@ -52,12 +52,12 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
 
         if(bean.WhiteFilters != null && bean.WhiteFilters.Count > 0)
         {
-            foreach (var whiteFilter in bean.WhiteFilters)
-            {
-                const string whiteFilterSql = @"
+            const string whiteFilterSql = @"
                     INSERT INTO SSO_WHITE_FILTER (HOST_ID, FILTER_PATH, CREATED_AT, UPDATED_AT)
                     VALUES (@hostId, @filterPath, @createdAt, @updatedAt)
                 ";
+            foreach (var whiteFilter in bean.WhiteFilters)
+            {                
                 await using var whiteFilterCommand = connection.CreateCommand();
                 whiteFilterCommand.CommandText = whiteFilterSql;
 
@@ -99,7 +99,6 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
         ";
         await using var command = connection.CreateCommand();
         command.CommandText = sql;
-
         command.Parameters.AddWithValue("@hostId", bean.HostId);
         command.Parameters.AddWithValue("@host", bean.Host);
         command.Parameters.AddWithValue("@reverseProxyHost", bean.ReverseProxyHost);
@@ -112,17 +111,17 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
 
         if(bean.WhiteFilters != null && bean.WhiteFilters.Count > 0)
         {
-            foreach (var whiteFilter in bean.WhiteFilters)
-            {
-                const string whiteFilterSql = @"
+            const string whiteFilterSql = @"
                     UPDATE SSO_WHITE_FILTER
                     SET FILTER_PATH = @filterPath,
                         UPDATED_AT = @updatedAt
                     WHERE HOST_ID = @hostId AND WHITE_LIST_ID = @whiteListId
                 ";
+
+            foreach (var whiteFilter in bean.WhiteFilters)
+            {                
                 await using var whiteFilterCommand = connection.CreateCommand();
                 whiteFilterCommand.CommandText = whiteFilterSql;
-
                 whiteFilterCommand.Parameters.AddWithValue("@hostId", whiteFilter.HostId);
                 whiteFilterCommand.Parameters.AddWithValue("@whiteListId", whiteFilter.WhiteListId);
                 whiteFilterCommand.Parameters.AddWithValue("@filterPath", whiteFilter.FilterPath);
@@ -165,17 +164,18 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
     }
 
     /// <summary>
-    /// 查詢所有 SSO Proxy Target 及其對應的白名單過濾器
+    /// 查詢所有啟用的 SSO Proxy Target 及其對應的白名單過濾器
     /// </summary>
     /// <returns></returns>
-    public async Task<List<SsoProxyTarget>> GetAllSsoProxyTargets()
+    public async Task<List<SsoProxyTarget>> GetAllEnabledSsoProxyTargets()
     {
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync();
 
         const string sql = @"
-            SELECT * FROM SSO_PROXY_TARGET                 
-                LEFT JOIN SSO_WHITE_FILTER ON SSO_PROXY_TARGET.HOST_ID = SSO_WHITE_FILTER.HOST_ID            
+            SELECT * FROM SSO_PROXY_TARGET A
+                LEFT JOIN SSO_WHITE_FILTER B ON A.HOST_ID = B.HOST_ID      
+            WHERE A.IS_ENABLED = TRUE
         ";
         await using var command = connection.CreateCommand();
         command.CommandText = sql;
