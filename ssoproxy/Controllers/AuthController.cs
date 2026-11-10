@@ -32,6 +32,8 @@ public class AuthController : ControllerBase
     {
         var profiler = new Profiler();
 
+        // 1. 從 Authorization Header 或 Cookie 中取得 Token
+        // 2. 驗證 Token 是否有效，並取得對應的使用者資訊
         var authHeader = Request.Headers.Authorization.FirstOrDefault();
         if (string.IsNullOrWhiteSpace(authHeader) && Request.Cookies.TryGetValue("sso_token", out var cookieToken))
         {

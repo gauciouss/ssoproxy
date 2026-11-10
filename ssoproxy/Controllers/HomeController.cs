@@ -133,4 +133,30 @@ public class HomeController : Controller
     {
         return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
+
+
+    public void Logout(string? returnUrl)
+    {
+
+        var ssoToken = Request.Cookies["sso_token"];
+        if (!string.IsNullOrEmpty(ssoToken))
+        {
+            _logger.Info("[SSO_LOGOUT] Logging out user with token: {Token}", ssoToken);
+            // 1. 從 Redis 中移除 Token
+            _tokenService.RemoveTokenAsync(ssoToken).GetAwaiter().GetResult();
+            // 2. 從 Cookie 中刪除 Token
+            Response.Cookies.Delete("sso_token", new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = Request.IsHttps,
+                SameSite = SameSiteMode.Lax,
+                Path = "/",
+                Domain = GetCookieDomain()
+            });
+        }
+        var targetUrl = NormalizeReturnUrl(returnUrl);
+        _logger.Info("[SSO_LOGOUT] User logged out successfully; redirecting to: {TargetUrl}", targetUrl);
+        Response.Redirect(targetUrl);
+    }
+
 }
