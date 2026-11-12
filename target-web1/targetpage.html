@@ -3,12 +3,166 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Target Web 1</title>
+  <meta name="theme-color" content="#0d6efd" />
+  <title>Target Web 1 - 使用者資訊</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", sans-serif;
+      color: #212529;
+      background: #f4f7fb;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 32px 16px;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(ellipse at top, rgba(13, 110, 253, 0.1), transparent 55%),
+        #f4f7fb;
+    }
+
+    main {
+      width: min(100%, 620px);
+    }
+
+    .card {
+      overflow: hidden;
+      border: 1px solid rgba(33, 37, 41, 0.08);
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 1rem 2.5rem rgba(33, 37, 41, 0.1);
+    }
+
+    .card-header {
+      padding: 28px 32px 24px;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: #0d6efd;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.5rem, 5vw, 1.9rem);
+      line-height: 1.3;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      color: #6c757d;
+      line-height: 1.6;
+    }
+
+    .card-body {
+      padding: 24px 32px 32px;
+    }
+
+    .section-label {
+      margin: 0 0 12px;
+      color: #495057;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    #status {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      min-height: 48px;
+      margin: 0 0 16px;
+      padding: 13px 15px;
+      border: 1px solid #b6d4fe;
+      border-radius: 8px;
+      background: #cfe2ff;
+      color: #084298;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    #status::before {
+      flex: 0 0 auto;
+      width: 8px;
+      height: 8px;
+      margin-top: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      content: "";
+    }
+
+    #status[data-state="success"] {
+      border-color: #a3cfbb;
+      background: #d1e7dd;
+      color: #0f5132;
+    }
+
+    #status[data-state="error"] {
+      border-color: #f1aeb5;
+      background: #f8d7da;
+      color: #842029;
+    }
+
+    #userInfo {
+      min-height: 120px;
+      max-height: 50vh;
+      overflow: auto;
+      margin: 0;
+      padding: 18px;
+      border: 1px solid #343a40;
+      border-radius: 8px;
+      background: #212529;
+      color: #e9ecef;
+      font: 0.9rem/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 20px 12px;
+      }
+
+      .card-header {
+        padding: 24px 22px 20px;
+      }
+
+      .card-body {
+        padding: 20px 22px 24px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h1>Target page 1</h1>
-  <p id="status">Loading user information...</p>
-  <pre id="userInfo" aria-live="polite"></pre>
+  <main>
+    <section class="card" aria-labelledby="pageTitle">
+      <header class="card-header">
+        <p class="eyebrow">SSO Proxy · Target Web 1</p>
+        <h1 id="pageTitle">使用者資訊</h1>
+        <p class="subtitle">目前登入工作階段的驗證資訊</p>
+      </header>
+      <div class="card-body">
+        <h2 class="section-label">驗證狀態</h2>
+        <p id="status" role="status" aria-live="polite">正在載入使用者資訊…</p>
+        <h2 class="section-label">使用者資料</h2>
+        <pre id="userInfo" aria-live="polite">等待資料載入…</pre>
+      </div>
+    </section>
+  </main>
 
   <script>
     async function loadUserInfo() {
@@ -19,13 +173,16 @@
         const result = await response.json();
 
         if (!response.ok || !result.body) {
-          throw new Error(result.header?.message || result.header?.Message || "User information request failed.");
+          throw new Error(result.header?.message || result.header?.Message || "使用者資訊讀取失敗。");
         }
 
-        status.textContent = "Authenticated user:";
+        status.dataset.state = "success";
+        status.textContent = "已成功驗證，以下為目前登入的使用者資訊。";
         userInfo.textContent = JSON.stringify(result.body, null, 2);
       } catch (error) {
-        status.textContent = `Unable to load user information: ${error.message}`;
+        status.dataset.state = "error";
+        status.textContent = `無法載入使用者資訊：${error.message}`;
+        userInfo.textContent = "目前無可顯示的使用者資料。";
       }
     }
 
