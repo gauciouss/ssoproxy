@@ -6,6 +6,7 @@ using NLog;
 using ssoproxy.Models;
 using gd.Core;
 using ssoproxy.Core;
+using gd.Util;
 
 namespace ssoproxy.Services.Auth;
 
@@ -29,19 +30,30 @@ public class LoginService : ILoginService
 
     public async Task<LoginResult> AuthenticateAsync(string username, string password)
     {
+        Profiler profiler = new Profiler();
+        _logger.Trace(profiler.StartLog("Authenticating user. Username: {0}"), username);
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
         {
             throw new GDException(SsoProxyCode.MissingCredentials);
         }
 
         // TODO: 實際環境請改成呼叫身份驗證服務或資料庫帳密驗證
-        if (username != "admin" || password != "admin123")
+        if (username != "Y789000130" || password != "0000")
         {
             throw new GDException(SsoProxyCode.InvalidCredentials);
         }
 
         var token = GenerateJweToken(username);
-        var userJson = JsonSerializer.Serialize(new { Username = username, Role = "Admin" });
+        //var userJson = JsonSerializer.Serialize(new { Username = username, Role = "Admin" });
+        var userJson = JsonSerializer.Serialize(
+            new [
+                {"ID": "Y789000130", 
+                 "Accounts": {
+                    "STK": [{"acno": "7000307", "bhno": "9228", "name": "STK帳號"}],
+                    "OSB": [{"acno": "20009103003", "bhno": "9228", "name": "OSB帳號"}],
+                 }}
+            ]
+        );
 
         await _tokenService.AddTokenAsync(token, userJson, TimeSpan.FromMinutes(TokenExpiryMinutes));
 
