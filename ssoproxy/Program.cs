@@ -64,7 +64,10 @@ try
     // 靜態檔案支援 (放行 CSS/JS 等靜態資源載入)
     app.UseStaticFiles();
 
-    // 6. 全局防禦 Middleware (包含由 IPathValidatorService 處理的免檢驗過濾，以及 Token 驗證)
+    // 6. 建立統一安全過濾器，先攔截可疑的 URL / Header / Query / Form 輸入，再執行身份驗證
+    app.UseMiddleware<SecurityFilterMiddleware>();
+
+    // 7. 全局防禦 Middleware (包含由 IPathValidatorService 處理的免檢驗過濾，以及 Token 驗證)
     app.UseMiddleware<GlobalDefenseMiddleware>();
 
     // 設定 MVC 預設路由，優先處理登入頁等本機 Controller 路由

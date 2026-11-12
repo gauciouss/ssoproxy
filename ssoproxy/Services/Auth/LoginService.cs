@@ -45,27 +45,32 @@ public class LoginService : ILoginService
 
         var token = GenerateJweToken(username);
         //var userJson = JsonSerializer.Serialize(new { Username = username, Role = "Admin" });
-        var userJson = JsonSerializer.Serialize(
-            new [
-                {"ID": "Y789000130", 
-                 "Accounts": {
-                    "STK": [{"acno": "7000307", "bhno": "9228", "name": "STK帳號"}],
-                    "OSB": [{"acno": "20009103003", "bhno": "9228", "name": "OSB帳號"}],
-                 }}
-            ]
+        var userJson = JsonSerializer.Serialize(            
+            new []
+            {
+                new {
+                    ID = "Y789000130",
+                    Accounts = new {
+                        STK = new [] { new { acno = "7000307", bhno = "9228", name = "STK帳號" } },
+                        OSB = new [] { new { acno = "20009103003", bhno = "9228", name = "OSB帳號" } }
+                    }
+                }
+            }
         );
 
         await _tokenService.AddTokenAsync(token, userJson, TimeSpan.FromMinutes(TokenExpiryMinutes));
 
-        _logger.Info("[SSO_LOGIN_SUCCESS] User {Username} logged in successfully and JWE token was created", username);
-
-        return new LoginResult
+        var result = new LoginResult
         {
             Success = true,
             Token = token,
             Username = username,
             ExpiresInMinutes = TokenExpiryMinutes
         };
+
+        _logger.Info(profiler.StopLog("User {Username} authenticated successfully. Token: {Token}, ExpiresInMinutes: {ExpiresInMinutes}"), username, token, TokenExpiryMinutes);
+
+        return result;
     }
 
     private string GenerateJweToken(string username)

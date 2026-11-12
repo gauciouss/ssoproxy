@@ -94,7 +94,7 @@ namespace ssoproxy.Repository
                     string paramName = prop.Name.StartsWith("@") || prop.Name.StartsWith(":") ? prop.Name : "@" + prop.Name;
 
                     parameter.ParameterName = paramName;
-                    parameter.Value = prop.GetValue(parameters) ?? DBNull.Value;
+                    parameter.Value = SqlInjectionGuard.SanitizeParameter(prop.GetValue(parameters), prop.Name);
                     command.Parameters.Add(parameter);
                 }
             }

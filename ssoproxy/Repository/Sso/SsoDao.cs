@@ -1,5 +1,6 @@
 using NLog;
 using Microsoft.Data.SqlClient;
+using ssoproxy.Repository;
 
 namespace ssoproxy.Repository.Sso;
 
@@ -38,14 +39,14 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
         ";
         await using var command = new SqlCommand(sql, connection);
 
-        command.Parameters.AddWithValue("@hostId", bean.HostId);
-        command.Parameters.AddWithValue("@host", bean.Host);
-        command.Parameters.AddWithValue("@reverseProxyHost", bean.ReverseProxyHost);
-        command.Parameters.AddWithValue("@orderNo", bean.OrderNo);
-        command.Parameters.AddWithValue("@systemName", bean.SystemName);
-        command.Parameters.AddWithValue("@isTerminated", bean.IsTerminated);
-        command.Parameters.AddWithValue("@createdAt", bean.CreatedAt);
-        command.Parameters.AddWithValue("@updatedAt", bean.UpdatedAt);
+        AddSafeParameter(command, "@hostId", bean.HostId);
+        AddSafeParameter(command, "@host", bean.Host);
+        AddSafeParameter(command, "@reverseProxyHost", bean.ReverseProxyHost);
+        AddSafeParameter(command, "@orderNo", bean.OrderNo);
+        AddSafeParameter(command, "@systemName", bean.SystemName);
+        AddSafeParameter(command, "@isTerminated", bean.IsTerminated);
+        AddSafeParameter(command, "@createdAt", bean.CreatedAt);
+        AddSafeParameter(command, "@updatedAt", bean.UpdatedAt);
 
         await command.ExecuteNonQueryAsync();
 
@@ -59,10 +60,10 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
             {                
                 await using var whiteFilterCommand = new SqlCommand(whiteFilterSql, connection);
 
-                whiteFilterCommand.Parameters.AddWithValue("@hostId", whiteFilter.HostId);
-                whiteFilterCommand.Parameters.AddWithValue("@filterPath", whiteFilter.FilterPath);
-                whiteFilterCommand.Parameters.AddWithValue("@createdAt", whiteFilter.CreatedAt);
-                whiteFilterCommand.Parameters.AddWithValue("@updatedAt", whiteFilter.UpdatedAt);
+                AddSafeParameter(whiteFilterCommand, "@hostId", whiteFilter.HostId);
+                AddSafeParameter(whiteFilterCommand, "@filterPath", whiteFilter.FilterPath);
+                AddSafeParameter(whiteFilterCommand, "@createdAt", whiteFilter.CreatedAt);
+                AddSafeParameter(whiteFilterCommand, "@updatedAt", whiteFilter.UpdatedAt);
 
                 await whiteFilterCommand.ExecuteNonQueryAsync();
             }
@@ -96,13 +97,13 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
             WHERE HOST_ID = @hostId
         ";
         await using var command = new SqlCommand(sql, connection);
-        command.Parameters.AddWithValue("@hostId", bean.HostId);
-        command.Parameters.AddWithValue("@host", bean.Host);
-        command.Parameters.AddWithValue("@reverseProxyHost", bean.ReverseProxyHost);
-        command.Parameters.AddWithValue("@orderNo", bean.OrderNo);
-        command.Parameters.AddWithValue("@systemName", bean.SystemName);
-        command.Parameters.AddWithValue("@isTerminated", bean.IsTerminated);
-        command.Parameters.AddWithValue("@updatedAt", bean.UpdatedAt);
+        AddSafeParameter(command, "@hostId", bean.HostId);
+        AddSafeParameter(command, "@host", bean.Host);
+        AddSafeParameter(command, "@reverseProxyHost", bean.ReverseProxyHost);
+        AddSafeParameter(command, "@orderNo", bean.OrderNo);
+        AddSafeParameter(command, "@systemName", bean.SystemName);
+        AddSafeParameter(command, "@isTerminated", bean.IsTerminated);
+        AddSafeParameter(command, "@updatedAt", bean.UpdatedAt);
 
         await command.ExecuteNonQueryAsync();
 
@@ -118,10 +119,10 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
             foreach (var whiteFilter in bean.WhiteFilters)
             {                
                 await using var whiteFilterCommand = new SqlCommand(whiteFilterSql, connection);
-                whiteFilterCommand.Parameters.AddWithValue("@hostId", whiteFilter.HostId);
-                whiteFilterCommand.Parameters.AddWithValue("@whiteListId", whiteFilter.WhiteListId);
-                whiteFilterCommand.Parameters.AddWithValue("@filterPath", whiteFilter.FilterPath);
-                whiteFilterCommand.Parameters.AddWithValue("@updatedAt", whiteFilter.UpdatedAt);
+                AddSafeParameter(whiteFilterCommand, "@hostId", whiteFilter.HostId);
+                AddSafeParameter(whiteFilterCommand, "@whiteListId", whiteFilter.WhiteListId);
+                AddSafeParameter(whiteFilterCommand, "@filterPath", whiteFilter.FilterPath);
+                AddSafeParameter(whiteFilterCommand, "@updatedAt", whiteFilter.UpdatedAt);
 
                 await whiteFilterCommand.ExecuteNonQueryAsync();
             }
@@ -141,6 +142,8 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
             return new List<SsoProxyTarget>();
         }
 
+        var cleanSystemName = SqlInjectionGuard.SanitizeText(systemName, nameof(systemName), 128);
+
         await using var connection = new SqlConnection(_connectionFactory.GetConnectionString());
         await connection.OpenAsync();
         
@@ -152,13 +155,13 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
                    B.CREATED_AT AS FILTER_CREATED_AT, B.UPDATED_AT AS FILTER_UPDATED_AT
             FROM SSO_PROXY_TARGET A
             LEFT JOIN SSO_WHITE_FILTER B ON A.HOST_ID = B.HOST_ID
-            WHERE A.SYSTEM_NAME LIKE @systemName
+            WHERE A.SYSTEM_NAME LIKE @systemName ESCAPE '\\'
         ";
         await using var command = new SqlCommand(sql, connection);
 
         var parameter = command.CreateParameter();
         parameter.ParameterName = "@systemName";
-        parameter.Value = systemName;
+        parameter.Value = $"%{SqlInjectionGuard.EscapeLikePattern(cleanSystemName)}%";
         command.Parameters.Add(parameter);
         return await GetAllSsoProxyTargets(command);    
     }
@@ -191,6 +194,14 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
     /// </summary>
     /// <param name="command"></param>
     /// <returns></returns>
+    private static void AddSafeParameter(SqlCommand command, string parameterName, object? value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = parameterName;
+        parameter.Value = SqlInjectionGuard.SanitizeParameter(value, parameterName);
+        command.Parameters.Add(parameter);
+    }
+
     private async Task<List<SsoProxyTarget>> GetAllSsoProxyTargets(SqlCommand command)
     {
         await using var reader = await command.ExecuteReaderAsync();
