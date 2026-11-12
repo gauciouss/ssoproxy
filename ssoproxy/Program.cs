@@ -51,6 +51,8 @@ try
     // 4. 註冊 SSO DAO
     //builder.Services.AddSingleton<ssoproxy.Repository.SqlConnectionFactory>();
     //builder.Services.AddSingleton<ssoproxy.Repository.Sso.SsoDao>();
+
+    // 5. 註冊 Auth 相關服務
     builder.Services.AddSingleton<ssoproxy.Services.Auth.IPathValidatorService, ssoproxy.Services.Auth.PathValidatorService>();
     builder.Services.AddSingleton<ssoproxy.Services.Auth.ILoginService, ssoproxy.Services.Auth.LoginService>();
     builder.Services.AddSingleton<ssoproxy.Services.Auth.ITokenService, ssoproxy.Services.Auth.TokenService>();

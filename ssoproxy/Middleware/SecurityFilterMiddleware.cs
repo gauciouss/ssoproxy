@@ -4,8 +4,10 @@ using ssoproxy.Repository;
 namespace ssoproxy.Middleware;
 
 /// <summary>
-/// SecurityFilterMiddleware 是一個 ASP.NET Core 中間件，用於攔截 HTTP 請求，檢查 URL、Query、Header、Cookie 和 Form 參數中是否存在可疑的 SQL 注入模式。
-/// 如果檢測到可疑輸入，將返回 400 Bad Request 並記錄警告日誌，否則將請求傳遞給下一個中間件。
+/// SecurityFilterMiddleware 是一個 ASP.NET Core 中間件，用於攔截 HTTP 請求
+/// 1. 檢查 URL、Query、Header、Cookie 和 Form 參數中是否存在可疑的 SQL 注入模式或是其他潛在的攻擊向量(如 XSS)。
+/// 2. 如果檢測到可疑輸入，將返回 400 Bad Request 並記錄警告日誌
+/// 3. 如果沒有檢測到可疑輸入，將請求傳遞給下一個中間件。
 /// </summary>
 public class SecurityFilterMiddleware
 {
@@ -28,6 +30,7 @@ public class SecurityFilterMiddleware
             suspiciousInputs.Add("path");
         }
 
+        /// 檢查 Query 參數
         foreach (var key in request.Query.Keys)
         {
             foreach (var value in request.Query[key])
@@ -43,6 +46,7 @@ public class SecurityFilterMiddleware
             }
         }
 
+        /// 檢查 Header 參數
         foreach (var key in request.Headers.Keys)
         {
             foreach (var value in request.Headers[key])
@@ -56,6 +60,7 @@ public class SecurityFilterMiddleware
             }
         }
 
+        /// 檢查 Cookie 參數
         foreach (var key in request.Cookies.Keys)
         {
             Logger.Trace("Checking cookie: {0}={1}", key, request.Cookies[key]);

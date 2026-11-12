@@ -13,6 +13,7 @@
 - CSS、JS 與 `/lib/` 靜態資源免登入驗證，不會被 302 導向登入頁。
 - 登入 Cookie 設定為 `.gd.com` 共用網域，登入一個 managed domain 後可存取其他 managed domain。
 - 補齊 Redis database、路徑驗證與登入 Controller 的 DI 註冊，避免 Proxy 啟動或請求時解析失敗。
+- 新增統一請求安全過濾器 `SecurityFilterMiddleware`，針對 path / query / header / cookie / form 做 SQL Injection 與 XSS 檢查。
 
 ## 目錄
 
@@ -72,6 +73,7 @@ flowchart LR
 | 元件 | 實作位置 | 責任 |
 | --- | --- | --- |
 | Web Host 與 DI | [ssoproxy/Program.cs](ssoproxy/Program.cs) | 註冊 MVC、Redis、DAO、服務與 YARP，建立 Middleware pipeline。 |
+| 安全過濾器 | [SecurityFilterMiddleware.cs](ssoproxy/Middleware/SecurityFilterMiddleware.cs) | 先於業務邏輯執行，掃描 path / query / header / cookie / form，攔截 SQL Injection 與 XSS 攻擊。 |
 | 全域防禦 | [GlobalDefenseMiddleware.cs](ssoproxy/Middleware/GlobalDefenseMiddleware.cs) | 判斷免驗證路徑、檢查 Token、保留 Authorization，缺少或失效 Token 時導向登入頁。 |
 | 路徑驗證 | [PathValidatorService.cs](ssoproxy/Services/PathValidatorService.cs) | 處理登入路徑與 `SsoWhitelist` Regex 白名單。 |
 | 登入服務 | [LoginService.cs](ssoproxy/Services/Auth/LoginService.cs) | 驗證帳密、產生加密格式 Token、將使用者 JSON 寫入 Redis。 |
@@ -109,11 +111,24 @@ flowchart LR
 
 ```text
 UseStaticFiles
-	-> GlobalDefenseMiddleware
-		-> MapControllerRoute（/Home/...）
-		-> MapReverseProxy（Host-based catch-all）
+	-> SecurityFilterMiddleware
+		-> GlobalDefenseMiddleware
+			-> MapControllerRoute（/Home/...）
+			-> MapReverseProxy（Host-based catch-all）
 ```
-因此 `wwwroot` 靜態資源會先於全域 Token 驗證處理；登入頁、Token API 與 `/css/`、`/js/`、`/lib/` 靜態資源由 `PathValidatorService` 放行。MVC 只處理 `/Home/...`，根路徑與其他目標路徑交由 YARP 依 Host 分流。
+因此所有 HTTP 請求都會先經過 `SecurityFilterMiddleware`，由中央入口檢查 URL、Query、Header、Cookie、Form 等欄位是否包含 SQL Injection 或 XSS payload；只在通過過濾後才會進入 `GlobalDefenseMiddleware` 做 Token 驗證與路徑授權。`wwwroot` 靜態資源會先於全域 Token 驗證處理；登入頁、Token API 與 `/css/`、`/js/`、`/lib/` 靜態資源由 `PathValidatorService` 放行。MVC 只處理 `/Home/...`，根路徑與其他目標路徑交由 YARP 依 Host 分流。
+
+### 安全過濾器（SecurityFilterMiddleware）
+
+`SecurityFilterMiddleware` 是統一的入口式安全防護層，目的在於把跨請求來源的潛在危險輸入集中在一個點處理，避免分散在 DAO、Controller 或各種檢查邏輯中。它會依序檢查：
+
+- `request.Path`：檢查 URL 路徑中是否包含可疑的 SQL 語句或 XSS 語法。
+- `request.Query`：檢查 QueryString 參數是否帶有 `OR 1=1`、`UNION SELECT`、`<script>`、`javascript:` 等危險 payload。
+- `request.Headers`：檢查 `Accept`、`User-Agent`、`Referer` 等標頭值是否被誤判為危險輸入，並保留正常 HTTP header 內容不被誤殺。
+- `request.Cookies`：檢查 Cookie 值是否含惡意 SQL 或 HTML/JS。
+- `request.Form`：檢查提交表單中的欄位值，避免登入、查詢、API payload 直接帶入惡意內容。
+
+一旦偵測到可疑輸入，middleware 會直接回覆 `400 Bad Request`，並記錄警告日誌，拒絕進入下一層業務邏輯。這種集中式篩選讓安全策略保持一致，同時也使後續的 `GlobalDefenseMiddleware` 和 DAO 層更容易維護。
 
 ### API 登入與 Token 建立
 
@@ -235,6 +250,7 @@ curl -H 'Host: test2.gd.com' --cookie 'sso_token=<token>' http://127.0.0.1/index
 - 網頁登入與 API 登入成功後都會設定 `sso_token` HttpOnly Cookie，效期與 Token 相同（目前 30 分鐘）；Target Web 透過 `/api/Auth/Me` 取得使用者資訊，不需要讀取 Token。
 - 驗證碼由前端產生並透過 Hidden Field 回傳，正式環境應改為伺服器端保存與驗證。
 - `Jwe:Secret`、Redis 密碼與 MySQL 密碼目前存在設定檔或 Compose 範例中，正式環境應改用 Secret 管理。
+- `SecurityFilterMiddleware` 為中央安全過濾器，會檢查 SQL Injection 與 XSS；在維護過程中，不應直接把合法 HTTP headers（例如 `Accept: text/html, */*`）當成惡意輸入。
 - Compose 中 Nginx upstream 使用 Proxy 服務名稱與容器內 `80` Port；Proxy 不發布主機 Port，外部流量統一由 Nginx 的主機 `80` 入口進入。
 - `docker-compose.yml` 的 MySQL 與 Redis 服務沒有對外暴露完整管理介面，預期由同一個 Docker network 內的 Proxy 使用。
 
