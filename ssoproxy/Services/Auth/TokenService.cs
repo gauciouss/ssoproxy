@@ -1,6 +1,7 @@
 using gd.Core;
 using ssoproxy.Repository.Redis;
 using NLog;
+using gd.Util;
 
 namespace ssoproxy.Services.Auth;
 
@@ -20,12 +21,15 @@ public class TokenService : ITokenService
 
     public async Task<string?> ValidateTokenAsync(string? authHeader)
     {
+        Profiler profiler = new Profiler();
+        _logger.Trace(profiler.StartLog("Validating token. AuthHeader: {0}"), authHeader);
         if (string.IsNullOrEmpty(authHeader))
         {
             return null;
         }
 
         string token = authHeader.Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase).Trim();
+        _logger.Debug("[SSO_TOKEN_VALIDATION] Extracted token: {0}", token);
         if (string.IsNullOrEmpty(token))
         {
             return null;
@@ -39,7 +43,7 @@ public class TokenService : ITokenService
             {
                 throw new GDException(ssoproxy.Core.SsoProxyCode.TokenExpired);
             }
-
+            _logger.Info(profiler.StopLog("Token validation completed successfully. Token: {0}, userInfo: {1}"), token, userInfo);
             return userInfo;
         }
         catch (Exception)

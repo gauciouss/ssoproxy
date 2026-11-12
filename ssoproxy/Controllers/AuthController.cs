@@ -84,4 +84,5 @@ public class AuthController : ControllerBase
                 execTime: profiler.ExecutionTime);
         }
     }
+    
 }

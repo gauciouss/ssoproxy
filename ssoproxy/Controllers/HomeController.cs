@@ -14,11 +14,13 @@ public class HomeController : Controller
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     private readonly ILoginService _loginService;
     private readonly IConfiguration _configuration;
+    private readonly ITokenService _tokenService;
 
-    public HomeController(ILoginService loginService, IConfiguration configuration)
+    public HomeController(ILoginService loginService, IConfiguration configuration, ITokenService tokenService)
     {
         _loginService = loginService;
         _configuration = configuration;
+        _tokenService = tokenService;
     }
 
     public IActionResult Index()
@@ -31,12 +33,16 @@ public class HomeController : Controller
         return View();
     }
 
+    
+
     [HttpGet("/Home/SsoLogin")]
     public IActionResult SsoLogin(string? returnUrl)
     {
         ViewData["ReturnUrl"] = NormalizeReturnUrl(returnUrl);
         return View();
     }
+
+    
 
     [HttpPost("/Login/SubmitSsoLogin")]
     public async Task<IActionResult> SubmitSsoLogin(string username, string password, string captchaValue, string captchaInput, string? returnUrl)
@@ -134,7 +140,11 @@ public class HomeController : Controller
         return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 
-
+    /// <summary>
+    /// 登出使用者，移除對應的 Token 並清除 Cookie。
+    /// </summary>
+    /// <param name="returnUrl"></param>
+    [HttpPost("Logout")]
     public void Logout(string? returnUrl)
     {
 

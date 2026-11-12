@@ -48,9 +48,9 @@ try
     });
     builder.Services.AddSingleton<ssoproxy.Repository.Redis.IRedisDatabase, ssoproxy.Repository.Redis.RedisDatabase>();
 
-    // 4. 註冊 MySQL SSO DAO
-    builder.Services.AddSingleton<ssoproxy.Repository.SqlConnectionFactory>();
-    builder.Services.AddSingleton<ssoproxy.Repository.Sso.ISsoDao, ssoproxy.Repository.Sso.SsoDao>();
+    // 4. 註冊 SSO DAO
+    //builder.Services.AddSingleton<ssoproxy.Repository.SqlConnectionFactory>();
+    //builder.Services.AddSingleton<ssoproxy.Repository.Sso.SsoDao>();
     builder.Services.AddSingleton<ssoproxy.Services.Auth.IPathValidatorService, ssoproxy.Services.Auth.PathValidatorService>();
     builder.Services.AddSingleton<ssoproxy.Services.Auth.ILoginService, ssoproxy.Services.Auth.LoginService>();
     builder.Services.AddSingleton<ssoproxy.Services.Auth.ITokenService, ssoproxy.Services.Auth.TokenService>();

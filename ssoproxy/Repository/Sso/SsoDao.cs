@@ -1,5 +1,5 @@
-using System.Data.Common;
 using NLog;
+using Microsoft.Data.SqlClient;
 
 namespace ssoproxy.Repository.Sso;
 
@@ -29,15 +29,14 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
             throw new ArgumentNullException(nameof(bean));
         }
 
-        await using var connection = _connectionFactory.CreateConnection();
+        await using var connection = new SqlConnection(_connectionFactory.GetConnectionString());
         await connection.OpenAsync();
 
         const string sql = @"
-            INSERT INTO SSO_PROXY_TARGET (HOST_ID, HOST, REVERSE_PROXY_HOST, ORDER, SYSTEM_NAME, IS_TERMINATED, CREATED_AT, UPDATED_AT)
-            VALUES (@hostId, @host, @reverseProxyHost, @order, @systemName, @isTerminated, @createdAt, @updatedAt)
+            INSERT INTO SSO_PROXY_TARGET (HOST_ID, HOST, REVERSE_PROXY_HOST, ORDER_NO, SYSTEM_NAME, IS_TERMINATED, CREATED_AT, UPDATED_AT)
+            VALUES (@hostId, @host, @reverseProxyHost, @orderNo, @systemName, @isTerminated, @createdAt, @updatedAt)
         ";
-        await using var command = connection.CreateCommand();
-        command.CommandText = sql;
+        await using var command = new SqlCommand(sql, connection);
 
         command.Parameters.AddWithValue("@hostId", bean.HostId);
         command.Parameters.AddWithValue("@host", bean.Host);
@@ -58,8 +57,7 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
                 ";
             foreach (var whiteFilter in bean.WhiteFilters)
             {                
-                await using var whiteFilterCommand = connection.CreateCommand();
-                whiteFilterCommand.CommandText = whiteFilterSql;
+                await using var whiteFilterCommand = new SqlCommand(whiteFilterSql, connection);
 
                 whiteFilterCommand.Parameters.AddWithValue("@hostId", whiteFilter.HostId);
                 whiteFilterCommand.Parameters.AddWithValue("@filterPath", whiteFilter.FilterPath);
@@ -84,7 +82,7 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
             throw new ArgumentNullException(nameof(bean));
         }
 
-        await using var connection = _connectionFactory.CreateConnection();
+        await using var connection = new SqlConnection(_connectionFactory.GetConnectionString());
         await connection.OpenAsync();
 
         const string sql = @"
@@ -97,8 +95,7 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
                 UPDATED_AT = @updatedAt
             WHERE HOST_ID = @hostId
         ";
-        await using var command = connection.CreateCommand();
-        command.CommandText = sql;
+        await using var command = new SqlCommand(sql, connection);
         command.Parameters.AddWithValue("@hostId", bean.HostId);
         command.Parameters.AddWithValue("@host", bean.Host);
         command.Parameters.AddWithValue("@reverseProxyHost", bean.ReverseProxyHost);
@@ -120,8 +117,7 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
 
             foreach (var whiteFilter in bean.WhiteFilters)
             {                
-                await using var whiteFilterCommand = connection.CreateCommand();
-                whiteFilterCommand.CommandText = whiteFilterSql;
+                await using var whiteFilterCommand = new SqlCommand(whiteFilterSql, connection);
                 whiteFilterCommand.Parameters.AddWithValue("@hostId", whiteFilter.HostId);
                 whiteFilterCommand.Parameters.AddWithValue("@whiteListId", whiteFilter.WhiteListId);
                 whiteFilterCommand.Parameters.AddWithValue("@filterPath", whiteFilter.FilterPath);
@@ -145,16 +141,20 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
             return new List<SsoProxyTarget>();
         }
 
-        await using var connection = _connectionFactory.CreateConnection();
+        await using var connection = new SqlConnection(_connectionFactory.GetConnectionString());
         await connection.OpenAsync();
         
         const string sql = @"
-            SELECT * FROM SSO_PROXY_TARGET                 
-                LEFT JOIN SSO_WHITE_FILTER ON SSO_PROXY_TARGET.HOST_ID = SSO_WHITE_FILTER.HOST_ID
-            WHERE SYSTEM_NAME LIKE @systemName
+            SELECT A.HOST_ID, A.HOST, A.REVERSE_PROXY_HOST, A.ORDER_NO, A.SYSTEM_NAME,
+                   A.IS_TERMINATED, A.IS_ENABLED,
+                   A.CREATED_AT AS TARGET_CREATED_AT, A.UPDATED_AT AS TARGET_UPDATED_AT,
+                   B.WHITE_LIST_ID, B.FILTER_PATH,
+                   B.CREATED_AT AS FILTER_CREATED_AT, B.UPDATED_AT AS FILTER_UPDATED_AT
+            FROM SSO_PROXY_TARGET A
+            LEFT JOIN SSO_WHITE_FILTER B ON A.HOST_ID = B.HOST_ID
+            WHERE A.SYSTEM_NAME LIKE @systemName
         ";
-        await using var command = connection.CreateCommand();
-        command.CommandText = sql;
+        await using var command = new SqlCommand(sql, connection);
 
         var parameter = command.CreateParameter();
         parameter.ParameterName = "@systemName";
@@ -169,16 +169,20 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
     /// <returns></returns>
     public async Task<List<SsoProxyTarget>> GetAllEnabledSsoProxyTargets()
     {
-        await using var connection = _connectionFactory.CreateConnection();
+        await using var connection = new SqlConnection(_connectionFactory.GetConnectionString());
         await connection.OpenAsync();
 
         const string sql = @"
-            SELECT * FROM SSO_PROXY_TARGET A
-                LEFT JOIN SSO_WHITE_FILTER B ON A.HOST_ID = B.HOST_ID      
-            WHERE A.IS_ENABLED = TRUE
+            SELECT A.HOST_ID, A.HOST, A.REVERSE_PROXY_HOST, A.ORDER_NO, A.SYSTEM_NAME,
+                   A.IS_TERMINATED, A.IS_ENABLED,
+                   A.CREATED_AT AS TARGET_CREATED_AT, A.UPDATED_AT AS TARGET_UPDATED_AT,
+                   B.WHITE_LIST_ID, B.FILTER_PATH,
+                   B.CREATED_AT AS FILTER_CREATED_AT, B.UPDATED_AT AS FILTER_UPDATED_AT
+            FROM SSO_PROXY_TARGET A
+            LEFT JOIN SSO_WHITE_FILTER B ON A.HOST_ID = B.HOST_ID
+            WHERE A.IS_ENABLED = 1
         ";
-        await using var command = connection.CreateCommand();
-        command.CommandText = sql;
+        await using var command = new SqlCommand(sql, connection);
         return await GetAllSsoProxyTargets(command);    
     }
 
@@ -204,21 +208,23 @@ public sealed class SsoProxyTargetDao : ISsoProxyTargetDao
                     OrderNo = reader.GetInt32(reader.GetOrdinal("ORDER_NO")),
                     SystemName = reader.GetString(reader.GetOrdinal("SYSTEM_NAME")),
                     IsTerminated = reader.GetBoolean(reader.GetOrdinal("IS_TERMINATED")),
-                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CREATED_AT")),
-                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UPDATED_AT"))
+                    IsEnabled = reader.GetBoolean(reader.GetOrdinal("IS_ENABLED")),
+                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("TARGET_CREATED_AT")),
+                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("TARGET_UPDATED_AT"))
                 };
                 targetDictionary[hostId] = ssoProxyTarget;
             }
 
-            if (!reader.IsDBNull(reader.GetOrdinal("FILTER_PATH")))
+            var whiteListIdOrdinal = reader.GetOrdinal("WHITE_LIST_ID");
+            if (!reader.IsDBNull(whiteListIdOrdinal))
             {
                 var whiteFilter = new SsoWhiteFilter
                 {
                     HostId = hostId,
-                    WhiteListId = reader.GetInt32(reader.GetOrdinal("WHITE_LIST_ID")),
+                    WhiteListId = reader.GetInt32(whiteListIdOrdinal),
                     FilterPath = reader.GetString(reader.GetOrdinal("FILTER_PATH")),
-                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CREATED_AT")),
-                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("UPDATED_AT"))
+                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("FILTER_CREATED_AT")),
+                    UpdatedAt = reader.GetDateTime(reader.GetOrdinal("FILTER_UPDATED_AT"))
                 };
                 ssoProxyTarget.WhiteFilters.Add(whiteFilter);
             }
