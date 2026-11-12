@@ -7,23 +7,25 @@ using ssoproxy.Middleware;
 using gd.Extensions;
 using NLog;
 using NLog.Web;
-var Logger = LogManager.Setup().LoadConfigurationFromFile("nlog.config").GetCurrentClassLogger();
+
+var builder = WebApplication.CreateBuilder(args);
+
+// 配置結構化 JSON Log
+builder.Logging.ClearProviders();
+builder.Logging.AddJsonConsole(options =>
+{
+    options.IncludeScopes = true;
+    options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
+});
+
+// 啟用 NLog 作為 host 日誌提供者，必須在 ASP.NET Core host 建立後執行，
+// 才能讓 NLog.Web.AspNetCore 的 aspnet-request / aspnet-user-identity 等 layout renderer 正常註冊
+builder.Host.UseNLog();
+
+var Logger = LogManager.GetCurrentClassLogger();
 try
 {
     Logger.Info("******* Application starting *******");
-
-    var builder = WebApplication.CreateBuilder(args);
-
-    // 配置結構化 JSON Log
-    builder.Logging.ClearProviders();
-    builder.Logging.AddJsonConsole(options =>
-    {
-        options.IncludeScopes = true;
-        options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
-    });
-
-    // 啟用 NLog 作為 host 日誌提供者
-    builder.Host.UseNLog();
 
     // Add services to the container.
     builder.Services.AddControllersWithViews();
