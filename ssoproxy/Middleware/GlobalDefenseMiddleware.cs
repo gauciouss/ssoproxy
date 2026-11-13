@@ -65,10 +65,14 @@ namespace ssoproxy.Middleware
                 }
 
                 var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
+                Logger.Debug("authHeader: {0}", authHeader);
+
                 if (string.IsNullOrEmpty(authHeader) && context.Request.Cookies.TryGetValue("sso_token", out var cookieToken))
                 {
                     authHeader = $"Bearer {cookieToken}";
                 }
+
+                
 
                 if (string.IsNullOrEmpty(authHeader))
                 {
@@ -81,6 +85,7 @@ namespace ssoproxy.Middleware
                 }
                 
                 string? userJson = await _tokenService.ValidateTokenAsync(authHeader);
+                Logger.Debug("userJson: {0}", userJson);
 
                 if (!string.IsNullOrEmpty(userJson))
                 {                    
