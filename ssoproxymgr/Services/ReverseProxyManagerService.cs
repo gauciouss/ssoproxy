@@ -1,0 +1,110 @@
+using Microsoft.Data.SqlClient;
+using ssoproxy.Models;
+using ssoproxy.Repository;
+using ssoproxy.Repository.Proxy;
+
+namespace ssoproxymgr.Services;
+
+public sealed class ReverseProxyManagerService
+{
+    private readonly IConfiguration _configuration;
+    private readonly IReverseProxyConfigDao _configDao;
+    private readonly HttpClient _httpClient;
+
+    public ReverseProxyManagerService(IConfiguration configuration, IReverseProxyConfigDao configDao, IHttpClientFactory httpClientFactory)
+    {
+        _configuration = configuration;
+        _configDao = configDao;
+        _httpClient = httpClientFactory.CreateClient();
+    }
+
+    public async Task<ReverseProxyConfigPayload> LoadCurrentConfigAsync()
+    {
+        var payload = new ReverseProxyConfigPayload();
+
+        payload.Clusters = (await _configDao.GetClustersAsync(true))
+            .Select(x => new ReverseProxyClusterModel
+            {
+                ClusterId = x.ClusterId,
+                ClusterName = x.ClusterName,
+                IsEnabled = x.IsEnabled
+            })
+            .ToList();
+
+        payload.Routes = (await _configDao.GetRoutesAsync(true))
+            .Select(x => new ReverseProxyRouteModel
+            {
+                RouteName = x.RouteName,
+                ClusterId = x.ClusterId,
+                Order = x.Order,
+                MatchPath = x.MatchPath,
+                MatchHosts = x.MatchHosts,
+                IsEnabled = x.IsEnabled
+            })
+            .ToList();
+
+        payload.Destinations = (await _configDao.GetDestinationsAsync(includeDisabled: true))
+            .Select(x => new ReverseProxyDestinationModel
+            {
+                ClusterId = x.ClusterId,
+                DestinationName = x.DestinationName,
+                Address = x.Address,
+                IsEnabled = x.IsEnabled
+            })
+            .ToList();
+
+        return payload;
+    }
+
+    public async Task SaveConfigAsync(ReverseProxyConfigPayload payload)
+    {
+        if (payload is null)
+        {
+            throw new ArgumentNullException(nameof(payload));
+        }
+
+        foreach (var cluster in payload.Clusters)
+        {
+            await _configDao.SaveClusterAsync(new ReverseProxyClusterRecord(
+                cluster.ClusterId,
+                cluster.ClusterName,
+                cluster.IsEnabled));
+        }
+
+        foreach (var destination in payload.Destinations)
+        {
+            await _configDao.SaveDestinationAsync(new ReverseProxyDestinationRecord(
+                destination.ClusterId,
+                destination.DestinationName,
+                destination.Address,
+                destination.IsEnabled));
+        }
+
+        foreach (var route in payload.Routes)
+        {
+            await _configDao.SaveRouteAsync(new ReverseProxyRouteRecord(
+                route.RouteName,
+                route.ClusterId,
+                route.Order,
+                route.MatchPath,
+                route.MatchHosts,
+                route.IsEnabled));
+        }
+    }
+
+    public async Task PublishAsync(ReverseProxyConfigPayload payload)
+    {
+        await SaveConfigAsync(payload);
+
+        var ssoproxyApiUrl = _configuration["SsoproxyApiBaseUrl"] ?? "http://localhost:5000";
+        var response = await _httpClient.PostAsJsonAsync(
+            $"{ssoproxyApiUrl.TrimEnd('/')}/api/Mgr/publish",
+            payload);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var message = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException($"Publish to ssoproxy failed: {response.StatusCode} - {message}");
+        }
+    }
+}

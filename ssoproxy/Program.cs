@@ -4,6 +4,8 @@ using ssoproxy.Repository.Redis;
 using ssoproxy.Services;
 using ssoproxy.Proxy;
 using ssoproxy.Middleware;
+using ssoproxy.Repository.Proxy;
+using Yarp.ReverseProxy.Configuration;
 using gd.Extensions;
 using NLog;
 using NLog.Web;
@@ -50,13 +52,29 @@ try
 
     // 4. 註冊 MySQL SSO DAO
     builder.Services.AddSingleton<ssoproxy.Repository.SqlConnectionFactory>();
+    builder.Services.AddSingleton<ssoproxy.Repository.Proxy.IReverseProxyConfigDao, ssoproxy.Repository.Proxy.ReverseProxyConfigDao>();
     builder.Services.AddSingleton<ssoproxy.Repository.Sso.ISsoDao, ssoproxy.Repository.Sso.SsoDao>();
     builder.Services.AddSingleton<ssoproxy.Services.Auth.IPathValidatorService, ssoproxy.Services.Auth.PathValidatorService>();
     builder.Services.AddSingleton<ssoproxy.Services.Auth.ILoginService, ssoproxy.Services.Auth.LoginService>();
     builder.Services.AddSingleton<ssoproxy.Services.Auth.ITokenService, ssoproxy.Services.Auth.TokenService>();
 
-    // 5. 註冊 YARP Reverse Proxy
-    builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+    var dynamicProxyConfigProvider = new DynamicProxyConfigProvider();
+    try
+    {
+        var reverseProxyConfig = await ReverseProxySqlConfigLoader.LoadFromDatabaseAsync(builder.Configuration);
+        if (reverseProxyConfig.Routes.Count > 0 && reverseProxyConfig.Clusters.Count > 0)
+        {
+            dynamicProxyConfigProvider.Update(reverseProxyConfig.Routes, reverseProxyConfig.Clusters.Values.ToList());
+        }
+    }
+    catch (Exception ex)
+    {
+        Logger.Warn(ex, "Unable to load reverse proxy config from SQL at startup; falling back to appsettings configuration.");
+    }
+
+    builder.Services.AddSingleton(dynamicProxyConfigProvider);
+    builder.Services.AddSingleton<IProxyConfigProvider>(dynamicProxyConfigProvider);
+    builder.Services.AddReverseProxy();
 
     var app = builder.Build();
     Logger.Info("Application startup");

@@ -1,0 +1,116 @@
+@{
+    Layout = null;
+    var returnUrl = ViewData["ReturnUrl"] as string;
+    var errorMessage = ViewBag.ErrorMessage as string;
+}
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>登入 - Reverse Proxy 管理</title>
+    <style>
+        :root {
+            --bg: #f3f4f6;
+            --card: #ffffff;
+            --border: #d1d5db;
+            --primary: #2563eb;
+            --text: #1f2937;
+            --danger: #b91c1c;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            color: var(--text);
+            font-family: Arial, sans-serif;
+        }
+
+        .login-card {
+            width: min(420px, calc(100vw - 32px));
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            padding: 28px;
+        }
+
+        h1 {
+            margin: 0 0 20px;
+            font-size: 28px;
+            text-align: center;
+        }
+
+        .field {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            background: var(--primary);
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .error {
+            margin-top: 12px;
+            color: var(--danger);
+            font-weight: 600;
+            min-height: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h1>Reverse Proxy 管理登入</h1>
+
+        <form asp-action="Login" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@returnUrl" />
+
+            <div class="field">
+                <label for="username">帳號</label>
+                <input id="username" name="username" type="text" required autocomplete="username" />
+            </div>
+
+            <div class="field">
+                <label for="password">密碼</label>
+                <input id="password" name="password" type="password" required autocomplete="current-password" />
+            </div>
+
+            <button type="submit">登入</button>
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="error">@errorMessage</div>
+            }
+        </form>
+    </div>
+</body>
+</html>

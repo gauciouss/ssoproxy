@@ -1,0 +1,101 @@
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reverse Proxy 管理</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 24px; background: #f8fafc; color: #1f2937; }
+        h1 { margin-bottom: 16px; }
+        .toolbar { display: flex; gap: 12px; margin-bottom: 16px; }
+        button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .primary { background: #2563eb; color: white; }
+        .secondary { background: #e5e7eb; color: #111827; }
+        .logout-link { display: inline-flex; align-items: center; justify-content: center; background: #111827; color: white; border-radius: 6px; padding: 10px 16px; text-decoration: none; font-weight: 600; }
+        textarea { width: 100%; min-height: 620px; font-family: Consolas, monospace; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; }
+        .status { margin-top: 12px; min-height: 24px; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <h1>Reverse Proxy 管理</h1>
+    <div class="toolbar">
+        <button class="secondary" type="button" id="loadBtn">載入設定</button>
+        <button class="secondary" type="button" id="saveBtn">儲存到資料庫</button>
+        <button class="primary" type="button" id="publishBtn">發佈到 ssoproxy</button>
+        <a class="logout-link" href="/Account/Logout">登出</a>
+    </div>
+
+    <textarea id="configJson" spellcheck="false"></textarea>
+    <div id="status" class="status"></div>
+
+    <script>
+        const jsonBox = document.getElementById('configJson');
+        const statusBox = document.getElementById('status');
+
+        async function callApi(url, method, payload) {
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: payload ? JSON.stringify(payload) : null
+            });
+
+            const text = await response.text();
+            if (response.status === 401) {
+                window.location.href = '/Account/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                return {
+                    ok: false,
+                    text: '未登入，已轉回登入頁面。'
+                };
+            }
+
+            return {
+                ok: response.ok,
+                text
+            };
+        }
+
+        async function loadConfig() {
+            statusBox.textContent = '載入中...';
+            const result = await callApi('/api/proxy/config', 'GET', null);
+            if (!result.ok) {
+                statusBox.textContent = '載入失敗';
+                return;
+            }
+
+            const payload = JSON.parse(result.text || '{}');
+            jsonBox.value = JSON.stringify(payload, null, 2);
+            statusBox.textContent = '設定已載入';
+        }
+
+        async function saveConfig(publish) {
+            let payload;
+            try {
+                payload = JSON.parse(jsonBox.value || '{}');
+            } catch (err) {
+                statusBox.textContent = 'JSON 格式錯誤';
+                return;
+            }
+
+            statusBox.textContent = publish ? '發佈中...' : '儲存中...';
+            const endpoint = publish ? '/api/proxy/publish' : '/api/proxy/save';
+            const result = await callApi(endpoint, 'POST', payload);
+            if (!result.ok) {
+                statusBox.textContent = '操作失敗：' + result.text;
+                return;
+            }
+
+            statusBox.textContent = publish ? '發布成功' : '儲存成功';
+        }
+
+        document.getElementById('loadBtn').addEventListener('click', loadConfig);
+        document.getElementById('saveBtn').addEventListener('click', () => saveConfig(false));
+        document.getElementById('publishBtn').addEventListener('click', () => saveConfig(true));
+
+        loadConfig();
+    </script>
+</body>
+</html>

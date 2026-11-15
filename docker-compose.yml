@@ -126,6 +126,31 @@ services:
 
 
   # ========================================================
+  # 反向代理管理介面
+  # ========================================================
+  sso-poc-mgr:
+    build:
+      context: .
+      dockerfile: ./ssoproxymgr/dockerfile
+    container_name: sso-poc-mgr
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ManagerAuth__Username=admin
+      - ManagerAuth__Password=admin123
+      - SsoproxyApiBaseUrl=http://sso-poc-proxy-1:80
+    volumes:
+      - ./ssoproxymgr/appsettings.json:/app/appsettings.json:ro
+    depends_on:
+      - sso-poc-proxy1
+      - sso-poc-proxy2
+    networks:
+      - sso-poc-secure-net
+    restart: always
+
+  # ========================================================
   # 後端儲存端與目標網頁系統 (維持不變)
   # ========================================================
   sso-poc-redis-master:

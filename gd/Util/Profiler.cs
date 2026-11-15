@@ -19,10 +19,19 @@ namespace gd.Util
 
         public long ExecutionTime => EndTime - StartTime;
 
+        public string TargetClzName { get; set; } = string.Empty;
+
         public Profiler()
         {
             StartTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         }
+
+        public Profiler(string targetClzName) : this()
+        {
+            TargetClzName = targetClzName;            
+            StartTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        }
+
 
         public void Stop()
         {
@@ -31,13 +40,27 @@ namespace gd.Util
 
         public string StartLog(string msg)
         {
-            return $"[Profiler][START] {msg} START_TIME: {StartTime} ms";
+            if(string.IsNullOrEmpty(TargetClzName))
+            {
+                return $"[Profiler][START] {msg} START_TIME: {StartTime} ms";
+            }
+            else
+            {
+                return $"[{TargetClzName}][START]{msg} START_TIME: {StartTime} ms";
+            }            
         }
 
         public string StopLog(string msg)
         {
-            Stop();
-            return $"[Profiler][END] {msg} END_TIME: {EndTime} ms, EXEC_TIME: {ExecutionTime} ms";
+            Stop();            
+            if(string.IsNullOrEmpty(TargetClzName))
+            {
+                return $"[Profiler][END] {msg} END_TIME: {EndTime} ms, EXEC_TIME: {ExecutionTime} ms";
+            }
+            else
+            {
+                return $"[{TargetClzName}][END] {msg} END_TIME: {EndTime} ms, EXEC_TIME: {ExecutionTime} ms";
+            }       
         }
     }
 }
