@@ -241,6 +241,99 @@ curl -H 'Host: test1.gd.com' --cookie 'sso_token=<token>' http://127.0.0.1/targe
 curl -H 'Host: test2.gd.com' --cookie 'sso_token=<token>' http://127.0.0.1/index.html
 ```
 
+## 建立離線開發環境
+為了執行docker build時不要去 cr.microsoft.com/dotnet/sdk:10.0-alpine 抓image以及nuget，先執行
+### 1. 把基礎image檔放到本機的container repos
+
+```
+docker pull mcr.microsoft.com/dotnet/sdk:10.0-alpine
+docker pull mcr.microsoft.com/dotnet/aspnet:10.0-alpine
+```
+### 2. 把會用的的.dotnet library先用nuget抓下來
+```
+dotnet restore
+```
+
+## 離線 Docker 打包與交付方式
+
+當專案需要搬到一台不連網的電腦執行時，建議採用「整份 Compose 專案 + 相關 Docker Image」的交付方式，而不是只帶來源碼。這樣最容易維持相同的服務名稱、網路設定與環境變數。
+
+### 1. 在有網路的建置機上先建置映像
+
+```bash
+cd E:\workstation\ssoproxy
+docker compose build
+docker compose up -d
+```
+
+若想確認目前建好的 image：
+
+```bash
+docker image ls
+```
+
+### 2. 匯出成 tar 檔，便於搬運
+
+```bash
+docker save -o sso-proxy-offline-images.tar \
+  ssoproxy-sso-poc-proxy1:latest \
+  ssoproxy-sso-poc-proxy2:latest \
+  nginx:alpine \
+  redis:7.2-alpine \
+  mcr.microsoft.com/mssql/server:2022-latest \
+  mcr.microsoft.com/dotnet/aspnet:10.0-alpine \
+  mcr.microsoft.com/dotnet/sdk:10.0-alpine
+```
+
+這個 tar 檔可直接複製到離線環境使用。
+
+### 3. 需要一併帶走的專案檔
+
+離線機器不只需要 Docker image，還要帶走 Compose / 設定 / 掛載資料夾，否則容器啟動時可能因為路徑或配置缺失失敗。建議一併攜帶：
+
+```text
+./docker-compose.yml
+./ssoproxy/
+./redis-config/
+./f5-config/
+./target-web1/
+./target-web2/
+./ssoproxy/logs/
+```
+
+### 4. 在離線機器上載入映像
+
+```bash
+docker load -i sso-proxy-offline-images.tar
+docker image ls
+```
+
+### 5. 在離線機器上啟動整套系統
+
+```bash
+cd <交付專案資料夾>
+docker compose up -d --build
+```
+
+若要用單一 App image 交付（只搬運 Proxy 本體），可另外執行：
+
+```bash
+cd E:\workstation\ssoproxy
+docker build -f ssoproxy/dockerfile -t ssoproxy:offline .
+docker save -o ssoproxy-offline-app.tar ssoproxy:offline
+```
+
+但這種做法只適合單一應用，不適合目前的整套 Redis + Sentinel + SQL + Nginx + Proxy 架構。這個專案最穩定的交付方式，是整套 Docker Compose 專案與所有依賴 image 一起搬運。
+
+### 6. 離線環境驗證
+
+```bash
+docker compose ps
+docker compose logs -f sso-poc-proxy1
+```
+
+若 Proxy 與 Nginx 都健康，表示離線交付包可正常啟動。使用 `curl` 或瀏覽器驗證 `http://localhost`、`http://test1.gd.com`、`http://test2.gd.com` 是否正確轉發。
+
 ## 目前限制與注意事項
 
 - `LoginService` 目前使用硬編碼測試帳密，正式環境應改接實際身分服務或資料庫。
