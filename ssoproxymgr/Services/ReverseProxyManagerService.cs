@@ -1,7 +1,5 @@
-using Microsoft.Data.SqlClient;
-using ssoproxy.Models;
-using ssoproxy.Repository;
-using ssoproxy.Repository.Proxy;
+using ssoproxymgr.Models;
+using ssoproxymgr.Repository.Proxy;
 
 namespace ssoproxymgr.Services;
 
@@ -10,6 +8,7 @@ public sealed class ReverseProxyManagerService
     private readonly IConfiguration _configuration;
     private readonly IReverseProxyConfigDao _configDao;
     private readonly HttpClient _httpClient;
+    private readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
 
     public ReverseProxyManagerService(IConfiguration configuration, IReverseProxyConfigDao configDao, IHttpClientFactory httpClientFactory)
     {
@@ -20,6 +19,7 @@ public sealed class ReverseProxyManagerService
 
     public async Task<ReverseProxyConfigPayload> LoadCurrentConfigAsync()
     {
+        _logger.Trace("Loading config from SQL...");
         var payload = new ReverseProxyConfigPayload();
 
         payload.Clusters = (await _configDao.GetClustersAsync(true))
@@ -52,6 +52,8 @@ public sealed class ReverseProxyManagerService
                 IsEnabled = x.IsEnabled
             })
             .ToList();
+
+        _logger.Info("Loaded config from SQL.");
 
         return payload;
     }

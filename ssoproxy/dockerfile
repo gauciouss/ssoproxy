@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /src
 
 # 安裝 busybox-extras 取得 telnet 工具
@@ -19,7 +19,7 @@ COPY gd/ ./gd/
 RUN dotnet publish "ssoproxy/ssoproxy.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # 部署階段：使用 Alpine 確保最小足跡
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 

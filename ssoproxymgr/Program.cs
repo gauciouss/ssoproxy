@@ -29,8 +29,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddSingleton<ssoproxy.Repository.SqlConnectionFactory>();
-builder.Services.AddSingleton<ssoproxy.Repository.Proxy.IReverseProxyConfigDao, ssoproxy.Repository.Proxy.ReverseProxyConfigDao>();
+builder.Services.AddSingleton<ssoproxymgr.Repository.SqlConnectionFactory>();
+builder.Services.AddSingleton<ssoproxymgr.Repository.Proxy.IReverseProxyConfigDao, ssoproxymgr.Repository.Proxy.ReverseProxyConfigDao>();
 builder.Services.AddSingleton<ssoproxymgr.Services.ReverseProxyManagerService>();
 
 var app = builder.Build();
