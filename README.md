@@ -97,6 +97,10 @@ flowchart LR
 
 所有服務位於 `sso-poc-secure-net`，Compose 定義的子網為 `172.31.254.0/24`。
 
+### Redis 部署說明
+用reids-sentine建立HA架構，並加入redis-replication同步master-slave的資料．
+	1. docker
+
 ## SD：軟體設計與請求流程
 
 ### 啟動與 Middleware 順序

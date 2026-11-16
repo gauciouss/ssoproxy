@@ -14,11 +14,13 @@ public class HomeController : Controller
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     private readonly ILoginService _loginService;
     private readonly IConfiguration _configuration;
+    private readonly ITokenService _tokenService;
 
-    public HomeController(ILoginService loginService, IConfiguration configuration)
+    public HomeController(ILoginService loginService, IConfiguration configuration, ITokenService tokenService)
     {
         _loginService = loginService;
         _configuration = configuration;
+        _tokenService = tokenService;
     }
 
     public IActionResult Index()
@@ -31,12 +33,16 @@ public class HomeController : Controller
         return View();
     }
 
+    
+
     [HttpGet("/Home/SsoLogin")]
     public IActionResult SsoLogin(string? returnUrl)
     {
         ViewData["ReturnUrl"] = NormalizeReturnUrl(returnUrl);
         return View();
     }
+
+    
 
     [HttpPost("/Login/SubmitSsoLogin")]
     public async Task<IActionResult> SubmitSsoLogin(string username, string password, string captchaValue, string captchaInput, string? returnUrl)
@@ -133,4 +139,34 @@ public class HomeController : Controller
     {
         return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
+
+    /// <summary>
+    /// 登出使用者，移除對應的 Token 並清除 Cookie。
+    /// </summary>
+    /// <param name="returnUrl"></param>
+    [HttpPost("Logout")]
+    public void Logout(string? returnUrl)
+    {
+
+        var ssoToken = Request.Cookies["sso_token"];
+        if (!string.IsNullOrEmpty(ssoToken))
+        {
+            _logger.Info("[SSO_LOGOUT] Logging out user with token: {Token}", ssoToken);
+            // 1. 從 Redis 中移除 Token
+            _tokenService.RemoveTokenAsync(ssoToken).GetAwaiter().GetResult();
+            // 2. 從 Cookie 中刪除 Token
+            Response.Cookies.Delete("sso_token", new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = Request.IsHttps,
+                SameSite = SameSiteMode.Lax,
+                Path = "/",
+                Domain = GetCookieDomain()
+            });
+        }
+        var targetUrl = NormalizeReturnUrl(returnUrl);
+        _logger.Info("[SSO_LOGOUT] User logged out successfully; redirecting to: {TargetUrl}", targetUrl);
+        Response.Redirect(targetUrl);
+    }
+
 }

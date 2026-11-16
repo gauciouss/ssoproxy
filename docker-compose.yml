@@ -46,7 +46,7 @@ services:
       - ./ssoproxy/logs:/app/logs
       - ./ssoproxy/appSettings.json:/app/appsettings.json
       - ./ssoproxy/nlog.config:/app/nlog.config
-      - ./ssoproxy/Views:/app/Views
+      - ./ssoproxy/Views:/app/Views      
       - ./ssoproxy/keys:/root/.aspnet/DataProtection-Keys # 👈 加上這行，讓金鑰持久化存放在本機，並共用同一個實體資料夾
     depends_on:
       - sso-poc-sentinel1
@@ -93,7 +93,7 @@ services:
       - ./ssoproxy/logs:/app/logs
       - ./ssoproxy/appSettings.json:/app/appsettings.json
       - ./ssoproxy/nlog.config:/app/nlog.config
-      - ./ssoproxy/Views:/app/Views
+      - ./ssoproxy/Views:/app/Views      
       - ./ssoproxy/keys:/root/.aspnet/DataProtection-Keys # 👈 加上這行，讓金鑰持久化存放在本機，並共用同一個實體資料夾，並共用同一個實體資料夾
     depends_on:
       - sso-poc-sentinel1
@@ -219,6 +219,20 @@ services:
   #    - sso-poc-secure-net
   #  restart: always
 
+  sso-poc-mssql2022:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sso-poc-mssql2022
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=YourStrong!Password2022
+    volumes:
+      - mssql-data:/var/opt/mssql
+    networks:
+      - sso-poc-secure-net
+    restart: always
+
   sso-poc-target-web1:
     image: nginx:alpine
     container_name: sso-poc-target-web1
@@ -240,3 +254,7 @@ services:
     networks:
       - sso-poc-secure-net
     restart: always
+
+volumes:
+  mssql-data:
+
