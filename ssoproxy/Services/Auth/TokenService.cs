@@ -2,6 +2,9 @@ using gd.Core;
 using ssoproxy.Repository.Redis;
 using NLog;
 using gd.Util;
+using System.Text.Json;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace ssoproxy.Services.Auth;
 
@@ -12,12 +15,24 @@ public class TokenService : ITokenService
 {
     private readonly IRedisDatabase _redisDb;
 
+    /// <summary>
+    ///  Token 的有效期限，單位為分鐘。此值可從 appsettings.json 中的 "TokenExpiryMinutes" 設定取得，若未設定則預設為 30 分鐘。
+    ///  這個常數用於在產生 JWE Token 時設定其過期時間，並在驗證 Token 時檢查其是否已過期。若需要更改 Token 的有效期限，可以在 appsettings.json 中修改 "TokenExpiryMinutes" 的值，或直接修改此常數的值。
+    ///  注意：若要在程式中動態調整 Token 的有效期限，建議將此常數改為從設定檔讀取，而不是硬編碼在程式中，以便於在不同環境下進行配置。
+    /// </summary>
+    private readonly int TokenExpiryMinutes = 30;
+
+    private readonly string _jweSecret = "sso-development-jwe-secret-32-bytes"; // 預設的 JWE 秘密金鑰，應從設定檔讀取
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-    public TokenService(IRedisDatabase redisDb)
+    public TokenService(IRedisDatabase redisDb, IConfiguration configuration)
     {
         _redisDb = redisDb;
-    }
+        // 從 appsettings.json 中讀取 TokenExpiryMinutes 的設定值，若未設定則使用預設值 30
+        TokenExpiryMinutes = configuration.GetValue<int>("Jwe.TokenExpiryMinutes", 30);
+        // 從 appsettings.json 中讀取 _jweSecret 的設定值，若未設定則使用預設值
+        _jweSecret = configuration.GetValue<string>("Jwe.Secret", _jweSecret);
+    }       
 
     public async Task<string?> ValidateTokenAsync(string? authHeader)
     {
@@ -37,18 +52,26 @@ public class TokenService : ITokenService
 
         try
         {
+            if (!CheckJWEToken(token))
+            {
+                throw new GDException(ssoproxy.Core.SsoProxyCode.InvalidToken);
+            }
+
             var userInfo = await _redisDb.GetStringAsync(token);
             _logger.Info("[SSO_TOKEN_VALIDATION] Token validation result: {0}", userInfo);
             if (string.IsNullOrEmpty(userInfo))
             {
-                throw new GDException(ssoproxy.Core.SsoProxyCode.TokenExpired);
+                throw new GDException(ssoproxy.Core.SsoProxyCode.InvalidToken);
             }
             _logger.Info(profiler.StopLog("Token validation completed successfully. Token: {0}, userInfo: {1}"), token, userInfo);
             return userInfo;
         }
+        catch (GDException)
+        {
+            throw;
+        }
         catch (Exception)
         {
-            // 可依實際架構加上 Logger 紀錄
             throw new GDException(ssoproxy.Core.SsoProxyCode.RedisConnectionError);
         }
     }
@@ -69,8 +92,38 @@ public class TokenService : ITokenService
 
     public string GenerateJweToken(params string[] idno)
     {
-        // 生成一個新的 GUID 作為 Token
-        return Guid.NewGuid().ToString("N");
+        var headerJson = JsonSerializer.Serialize(new { alg = "dir", enc = "A256GCM" });
+        var payloadJson = JsonSerializer.Serialize(new
+        {
+            sub = idno[0],
+            iat = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            exp = DateTimeOffset.UtcNow.AddMinutes(TokenExpiryMinutes).ToUnixTimeSeconds()
+        });
+
+        var key = SHA256.HashData(Encoding.UTF8.GetBytes(_jweSecret));
+        var iv = RandomNumberGenerator.GetBytes(12);
+        var plaintext = Encoding.UTF8.GetBytes(payloadJson);
+        var ciphertext = new byte[plaintext.Length];
+        var tag = new byte[16];
+
+        using var aes = new AesGcm(key, 16);
+        aes.Encrypt(iv, plaintext, ciphertext, tag);
+
+        var encodedHeader = Base64UrlEncode(Encoding.UTF8.GetBytes(headerJson));
+        var encodedEncryptedKey = string.Empty;
+        var encodedIv = Base64UrlEncode(iv);
+        var encodedCiphertext = Base64UrlEncode(ciphertext);
+        var encodedTag = Base64UrlEncode(tag);
+
+        return string.Join('.', encodedHeader, encodedEncryptedKey, encodedIv, encodedCiphertext, encodedTag);
+    }
+
+    private static string Base64UrlEncode(byte[] value)
+    {
+        return Convert.ToBase64String(value)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
     }
 
     private static string Base64UrlDecode(string value)
@@ -81,22 +134,85 @@ public class TokenService : ITokenService
             value += new string('=', 4 - padding);
         }
 
-        return System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(value.Replace('-', '+').Replace('_', '/')));
+        return Encoding.UTF8.GetString(Convert.FromBase64String(value.Replace('-', '+').Replace('_', '/')));
     }
 
-    private async void CheckJWEHeader(string token)
+    private static byte[] Base64UrlDecodeBytes(string value)
     {
-        // 解析 JWE Header，檢查是否符合預期的加密演算法與簽名演算法
-        // 若不符合，則拋出例外或記錄警告
-        // 這裡僅示範，實際實作需依據 JWE 規範進行解析與驗證
+        var normalized = value.Replace('-', '+').Replace('_', '/');
+        var padding = normalized.Length % 4;
+        if (padding > 0)
+        {
+            normalized += new string('=', 4 - padding);
+        }
+
+        return Convert.FromBase64String(normalized);
+    }
+
+    public bool CheckJWEToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return false;
+        }
+
         var parts = token.Split('.');
         if (parts.Length != 5)
         {
-            throw new GDException(ssoproxy.Core.SsoProxyCode.InvalidToken);
+            return false;
         }
 
-        var headerJson = Base64UrlDecode(parts[0]);
-        // 解析 headerJson 並檢查 alg 與 enc 欄位
-        // 若不符合預期，則拋出例外或記錄警告
+        try
+        {
+            var headerJson = Base64UrlDecode(parts[0]);
+            using var headerDoc = JsonDocument.Parse(headerJson);
+            if (!headerDoc.RootElement.TryGetProperty("alg", out var algProperty) ||
+                !headerDoc.RootElement.TryGetProperty("enc", out var encProperty))
+            {
+                return false;
+            }
+
+            var alg = algProperty.GetString();
+            var enc = encProperty.GetString();
+            if (!string.Equals(alg, "dir", StringComparison.Ordinal) ||
+                !string.Equals(enc, "A256GCM", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var key = SHA256.HashData(Encoding.UTF8.GetBytes(_jweSecret));
+            var iv = Base64UrlDecodeBytes(parts[2]);
+            var ciphertext = Base64UrlDecodeBytes(parts[3]);
+            var tag = Base64UrlDecodeBytes(parts[4]);
+
+            var plaintext = new byte[ciphertext.Length];
+            using var aes = new AesGcm(key, 16);
+            aes.Decrypt(iv, ciphertext, tag, plaintext);
+
+            var payloadJson = Encoding.UTF8.GetString(plaintext);
+            using var payloadDoc = JsonDocument.Parse(payloadJson);
+            if (!payloadDoc.RootElement.TryGetProperty("sub", out var subProperty) ||
+                !payloadDoc.RootElement.TryGetProperty("exp", out var expProperty))
+            {
+                return false;
+            }
+
+            var sub = subProperty.GetString();
+            if (string.IsNullOrWhiteSpace(sub))
+            {
+                return false;
+            }
+
+            if (!long.TryParse(expProperty.GetRawText().Trim('"'), out var expUnix))
+            {
+                return false;
+            }
+
+            return DateTimeOffset.UtcNow.ToUnixTimeSeconds() <= expUnix;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 }

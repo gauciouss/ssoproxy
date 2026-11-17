@@ -15,36 +15,48 @@ namespace ssoproxy.Services.Auth;
 /// </summary>
 public class LoginService : ILoginService
 {
-    private const int TokenExpiryMinutes = 30;
+    private int TokenExpiryMinutes = 30;
     private const string DefaultJweSecret = "sso-development-jwe-secret-32-bytes";
 
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     private readonly ITokenService _tokenService;
     private readonly string _jweSecret;
+    private readonly string _managerUsername;
+    private readonly string _managerPassword;
 
     public LoginService(ITokenService tokenService, IConfiguration configuration)
     {
         _tokenService = tokenService;
         _jweSecret = configuration["Jwe:Secret"] ?? DefaultJweSecret;
+        TokenExpiryMinutes = configuration.GetValue<int>("Jwe:TokenExpiryMinutes", TokenExpiryMinutes);
+        _managerUsername = configuration["ManagerAuth:Username"] ?? "admin";
+        _managerPassword = configuration["ManagerAuth:Password"] ?? "admin123";
     }
 
-    public async Task<LoginResult> AuthenticateAsync(string username, string password)
+    public async Task<LoginResult> AuthenticateAsync(string idno, string password)
     {
         Profiler profiler = new Profiler();
-        _logger.Trace(profiler.StartLog("Authenticating user. Username: {0}"), username);
-        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+        _logger.Trace(profiler.StartLog("Authenticating user. IDNO: {0}"), idno);
+        if (string.IsNullOrWhiteSpace(idno) || string.IsNullOrWhiteSpace(password))
         {
             throw new GDException(SsoProxyCode.MissingCredentials);
         }
 
-        // TODO: 實際環境請改成呼叫身份驗證服務或資料庫帳密驗證
-        if (username != "Y789000130" || password != "0000")
+        var isLegacySsoUser = string.Equals(idno, "Y789000130", StringComparison.Ordinal) &&
+                              string.Equals(password, "0000", StringComparison.Ordinal);
+
+        var isManagerUser = string.Equals(idno, _managerUsername, StringComparison.Ordinal) &&
+                            string.Equals(password, _managerPassword, StringComparison.Ordinal);
+
+        if (!isLegacySsoUser && !isManagerUser)
         {
             throw new GDException(SsoProxyCode.InvalidCredentials);
         }
 
-        var token = GenerateJweToken(username);
+        var token = _tokenService.GenerateJweToken(idno);
         //var userJson = JsonSerializer.Serialize(new { Username = username, Role = "Admin" });
+
+        //TODO 模擬使用者資訊，實際應從資料庫或其他來源取得
         var userJson = JsonSerializer.Serialize(            
             new []
             {
@@ -64,21 +76,21 @@ public class LoginService : ILoginService
         {
             Success = true,
             Token = token,
-            Username = username,
+            Idno = idno,
             ExpiresInMinutes = TokenExpiryMinutes
         };
 
-        _logger.Info(profiler.StopLog("User {Username} authenticated successfully. Token: {Token}, ExpiresInMinutes: {ExpiresInMinutes}"), username, token, TokenExpiryMinutes);
+        _logger.Info(profiler.StopLog("User {Idno} authenticated successfully. Token: {Token}, ExpiresInMinutes: {ExpiresInMinutes}"), idno, token, TokenExpiryMinutes);
 
         return result;
     }
 
-    private string GenerateJweToken(string username)
+    /*private string GenerateJweToken(string idno)
     {
         var headerJson = JsonSerializer.Serialize(new { alg = "dir", enc = "A256GCM" });
         var payloadJson = JsonSerializer.Serialize(new
         {
-            sub = username,
+            sub = idno,
             iat = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             exp = DateTimeOffset.UtcNow.AddMinutes(TokenExpiryMinutes).ToUnixTimeSeconds()
         });
@@ -107,5 +119,5 @@ public class LoginService : ILoginService
             .TrimEnd('=')
             .Replace('+', '-')
             .Replace('/', '_');
-    }
+    }*/
 }

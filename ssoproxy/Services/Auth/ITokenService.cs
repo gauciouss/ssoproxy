@@ -4,6 +4,8 @@ public interface ITokenService
 {
     Task<string?> ValidateTokenAsync(string? authHeader);
 
+    bool CheckJWEToken(string token);
+
     // 在 Redis 儲存 token 對應的使用者資訊，expiry 可選
     Task AddTokenAsync(string token, string userJson, TimeSpan? expiry = null);
 
