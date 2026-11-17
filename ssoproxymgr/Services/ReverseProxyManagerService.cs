@@ -1,3 +1,5 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using ssoproxymgr.Models;
 using ssoproxymgr.Repository.Proxy;
 
@@ -8,13 +10,15 @@ public sealed class ReverseProxyManagerService
     private readonly IConfiguration _configuration;
     private readonly IReverseProxyConfigDao _configDao;
     private readonly HttpClient _httpClient;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
 
-    public ReverseProxyManagerService(IConfiguration configuration, IReverseProxyConfigDao configDao, IHttpClientFactory httpClientFactory)
+    public ReverseProxyManagerService(IConfiguration configuration, IReverseProxyConfigDao configDao, IHttpClientFactory httpClientFactory, IHttpContextAccessor httpContextAccessor)
     {
         _configuration = configuration;
         _configDao = configDao;
         _httpClient = httpClientFactory.CreateClient();
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<ReverseProxyConfigPayload> LoadCurrentConfigAsync()
@@ -99,9 +103,19 @@ public sealed class ReverseProxyManagerService
         await SaveConfigAsync(payload);
 
         var ssoproxyApiUrl = _configuration["SsoproxyApiBaseUrl"] ?? "http://localhost:5000";
-        var response = await _httpClient.PostAsJsonAsync(
-            $"{ssoproxyApiUrl.TrimEnd('/')}/api/Mgr/publish",
-            payload);
+        var proxyToken = _httpContextAccessor.HttpContext?.User?.FindFirst("SsoproxyAccessToken")?.Value;
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{ssoproxyApiUrl.TrimEnd('/')}/api/Mgr/publish")
+        {
+            Content = JsonContent.Create(payload)
+        };
+
+        if (!string.IsNullOrWhiteSpace(proxyToken))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", proxyToken);
+        }
+
+        var response = await _httpClient.SendAsync(request);
 
         if (!response.IsSuccessStatusCode)
         {
