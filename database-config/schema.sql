@@ -1,4 +1,5 @@
-
+-- SQLBook: Code
+-- Active: 1794891661841@@172.16.229.128@1433@sso
 -- Reverse Proxy 設定資料表（SQL Server / MSSQL）
 CREATE TABLE dbo.proxy_cluster (
     cluster_id NVARCHAR(128) NOT NULL PRIMARY KEY,

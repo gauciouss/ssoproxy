@@ -36,7 +36,7 @@ services:
       SsoCookieDomain: .gd.com
       SsoWhitelist: '["^/target-web/health$"]'
       ConnectionStrings__MSSQL: >-
-        Server=sso-poc-mssql2022;Database=sso;User Id=${MSSQL_APP_USER};Password=${MSSQL_PASSWORD};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=True;
+        Server=172.16.229.128;Database=sso;User Id=${MSSQL_APP_USER};Password=${MSSQL_PASSWORD};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=True;
       ConnectionStrings__Redis: >-
         sso-poc-sentinel1:26379,sso-poc-sentinel2:26379,password=${REDIS_PASSWORD},serviceName=mymaster,abortConnect=false
     volumes:
@@ -50,8 +50,8 @@ services:
         condition: service_started
       sso-poc-sentinel2:
         condition: service_started
-      sso-poc-mssql-init:
-        condition: service_completed_successfully
+      # sso-poc-mssql-init:
+      #   condition: service_completed_successfully
     networks:
       sso-poc-secure-net:
         ipv4_address: 172.31.254.11
@@ -75,7 +75,7 @@ services:
       SsoCookieDomain: .gd.com
       SsoWhitelist: '["^/target-web/health$"]'
       ConnectionStrings__MSSQL: >-
-        Server=sso-poc-mssql2022;Database=sso;User Id=${MSSQL_APP_USER};Password=${MSSQL_PASSWORD};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=True;
+        Server=172.16.229.128;Database=sso;User Id=${MSSQL_APP_USER};Password=${MSSQL_PASSWORD};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=True;
       ConnectionStrings__Redis: >-
         sso-poc-sentinel1:26379,sso-poc-sentinel2:26379,password=${REDIS_PASSWORD},serviceName=mymaster,abortConnect=false
     volumes:
@@ -89,8 +89,8 @@ services:
         condition: service_started
       sso-poc-sentinel2:
         condition: service_started
-      sso-poc-mssql-init:
-        condition: service_completed_successfully
+      # sso-poc-mssql-init:
+      #   condition: service_completed_successfully
     networks:
       sso-poc-secure-net:
         ipv4_address: 172.31.254.12
@@ -116,7 +116,7 @@ services:
       ManagerAuth__Password: ${MGR_PASSWORD}
       SsoproxyApiBaseUrl: http://sso-poc-proxy-1:80
       ConnectionStrings__MSSQL: >-
-        Server=sso-poc-mssql2022;Database=sso;User Id=${MSSQL_APP_USER};Password=${MSSQL_PASSWORD};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=True;
+        Server=172.16.229.128;Database=sso;User Id=${MSSQL_APP_USER};Password=${MSSQL_PASSWORD};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=True;
     volumes:
       - ./ssoproxymgr/appsettings.json:/app/appsettings.json:ro
     depends_on:
@@ -124,8 +124,8 @@ services:
         condition: service_started
       sso-poc-proxy2:
         condition: service_started
-      sso-poc-mssql-init:
-        condition: service_completed_successfully
+      # sso-poc-mssql-init:
+      #   condition: service_completed_successfully
     networks:
       - sso-poc-secure-net
 
@@ -181,44 +181,44 @@ services:
     networks:
       - sso-poc-secure-net
 
-  sso-poc-mssql2022:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sso-poc-mssql2022g
-    restart: always
-    ports:
-      - "1433:1433"
-    environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
-    volumes:
-      - mssql-data:/var/opt/mssql
-    networks:
-      - sso-poc-secure-net
-    healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"${MSSQL_SA_PASSWORD}\" -Q \"SELECT 1\" -C || exit 1"]
-      interval: 5s
-      timeout: 10s
-      retries: 20
-      start_period: 20s
+  # sso-poc-mssql2022:
+  #   image: mcr.microsoft.com/mssql/server:2022-latest
+  #   container_name: sso-poc-mssql2022g
+  #   restart: always
+  #   ports:
+  #     - "1433:1433"
+  #   environment:
+  #     ACCEPT_EULA: "Y"
+  #     MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+  #   volumes:
+  #     - mssql-data:/var/opt/mssql
+  #   networks:
+  #     - sso-poc-secure-net
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"${MSSQL_SA_PASSWORD}\" -Q \"SELECT 1\" -C || exit 1"]
+  #     interval: 5s
+  #     timeout: 10s
+  #     retries: 20
+  #     start_period: 20s
 
-  sso-poc-mssql-init:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    depends_on:
-      sso-poc-mssql2022:
-        condition: service_healthy
-    environment:
-      SQLCMDPASSWORD: ${MSSQL_SA_PASSWORD}
-      SSO_SQL_PASSWORD: ${MSSQL_PASSWORD}
-    volumes:
-      - ./database-config/init-sso.sql:/scripts/init-sso.sql:ro
-    command:
-      - /bin/bash
-      - -c
-      - |
-        until /opt/mssql-tools18/bin/sqlcmd -S sso-poc-mssql2022 -U sa -P "${MSSQL_SA_PASSWORD}" -C -Q "SELECT 1" >/dev/null 2>&1; do sleep 2; done
-        /opt/mssql-tools18/bin/sqlcmd -b -C -S sso-poc-mssql2022 -U sa -P "${MSSQL_SA_PASSWORD}" -v SSO_SQL_PASSWORD="${MSSQL_PASSWORD}" -i /scripts/init-sso.sql
-    networks:
-      - sso-poc-secure-net
+  # sso-poc-mssql-init:
+  #   image: mcr.microsoft.com/mssql/server:2022-latest
+  #   depends_on:
+  #     sso-poc-mssql2022:
+  #       condition: service_healthy
+  #   environment:
+  #     SQLCMDPASSWORD: ${MSSQL_SA_PASSWORD}
+  #     SSO_SQL_PASSWORD: ${MSSQL_PASSWORD}
+  #   volumes:
+  #     - ./database-config/init-sso.sql:/scripts/init-sso.sql:ro
+  #   command:
+  #     - /bin/bash
+  #     - -c
+  #     - |
+  #       until /opt/mssql-tools18/bin/sqlcmd -S sso-poc-mssql2022 -U sa -P "${MSSQL_SA_PASSWORD}" -C -Q "SELECT 1" >/dev/null 2>&1; do sleep 2; done
+  #       /opt/mssql-tools18/bin/sqlcmd -b -C -S sso-poc-mssql2022 -U sa -P "${MSSQL_SA_PASSWORD}" -v SSO_SQL_PASSWORD="${MSSQL_PASSWORD}" -i /scripts/init-sso.sql
+  #   networks:
+  #     - sso-poc-secure-net
 
   sso-poc-target-web1:
     image: nginx:alpine
