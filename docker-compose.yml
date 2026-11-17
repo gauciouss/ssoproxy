@@ -36,7 +36,7 @@ services:
       SsoCookieDomain: .gd.com
       SsoWhitelist: '["^/target-web/health$"]'
       ConnectionStrings__MSSQL: >-
-        Server=172.16.229.128;Database=sso;User Id=${MSSQL_APP_USER};Password=${MSSQL_PASSWORD};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=True;
+        Server=${SQLSERVER_ADDR};Database=sso;User Id=${MSSQL_APP_USER};Password=${MSSQL_PASSWORD};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=True;
       ConnectionStrings__Redis: >-
         sso-poc-sentinel1:26379,sso-poc-sentinel2:26379,password=${REDIS_PASSWORD},serviceName=mymaster,abortConnect=false
     volumes:
@@ -75,7 +75,7 @@ services:
       SsoCookieDomain: .gd.com
       SsoWhitelist: '["^/target-web/health$"]'
       ConnectionStrings__MSSQL: >-
-        Server=172.16.229.128;Database=sso;User Id=${MSSQL_APP_USER};Password=${MSSQL_PASSWORD};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=True;
+        Server=${SQLSERVER_ADDR};Database=sso;User Id=${MSSQL_APP_USER};Password=${MSSQL_PASSWORD};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=True;
       ConnectionStrings__Redis: >-
         sso-poc-sentinel1:26379,sso-poc-sentinel2:26379,password=${REDIS_PASSWORD},serviceName=mymaster,abortConnect=false
     volumes:
@@ -116,7 +116,7 @@ services:
       ManagerAuth__Password: ${MGR_PASSWORD}
       SsoproxyApiBaseUrl: http://sso-poc-proxy-1:80
       ConnectionStrings__MSSQL: >-
-        Server=172.16.229.128;Database=sso;User Id=${MSSQL_APP_USER};Password=${MSSQL_PASSWORD};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=True;
+        Server=${SQLSERVER_ADDR};Database=sso;User Id=${MSSQL_APP_USER};Password=${MSSQL_PASSWORD};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=True;
     volumes:
       - ./ssoproxymgr/appsettings.json:/app/appsettings.json:ro
     depends_on:
