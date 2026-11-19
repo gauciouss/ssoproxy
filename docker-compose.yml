@@ -112,6 +112,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
+      SSOPROXY_CONTAINER_NAME: sso-poc-mgr
       ManagerAuth__Username: ${MGR_USERNAME}
       ManagerAuth__Password: ${MGR_PASSWORD}
       SsoproxyApiBaseUrl: http://sso-poc-proxy-1:80
@@ -119,6 +120,7 @@ services:
         Server=${SQLSERVER_ADDR};Database=sso;User Id=${MSSQL_APP_USER};Password=${MSSQL_PASSWORD};TrustServerCertificate=True;Encrypt=True;MultipleActiveResultSets=True;
     volumes:
       - ./ssoproxymgr/appsettings.json:/app/appsettings.json:ro
+      - ./ssoproxymgr/logs:/app/logs
     depends_on:
       sso-poc-proxy1:
         condition: service_started

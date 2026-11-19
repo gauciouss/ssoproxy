@@ -23,17 +23,20 @@ namespace ssoproxy.Middleware
     public class GlobalDefenseMiddleware
     {
         private readonly RequestDelegate _next;
-        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
         private IRedisDatabase _redisDatabase;
 
         private ITokenService _tokenService;
 
-        public GlobalDefenseMiddleware(RequestDelegate next, IRedisDatabase redisDatabase, ITokenService tokenService)
+        private IConfiguration _configuration;
+
+        public GlobalDefenseMiddleware(RequestDelegate next, IRedisDatabase redisDatabase, ITokenService tokenService, IConfiguration configuration)
         {
             _next = next;
             _redisDatabase = redisDatabase;
             _tokenService = tokenService;
+            _configuration = configuration;
         }   
         
 
@@ -52,17 +55,28 @@ namespace ssoproxy.Middleware
             var profiler = new Profiler();
             string traceId = context.TraceIdentifier;
             string requestPath = context.Request.Path.Value ?? string.Empty;
-            Logger.Trace(profiler.StartLog("Processing request. TraceId: {0}, path: {1}"), traceId, requestPath);   
+            _logger.Trace(profiler.StartLog("Processing request. TraceId: {0}, path: {1}"), traceId, requestPath);   
             try
             {
                 var pathValidator = context.RequestServices.GetRequiredService<IPathValidatorService>();
 
                 if (pathValidator.IsBypassable(requestPath))
                 {
-                    Logger.Info(profiler.StopLog("Request processing completed successfully. TraceId: {0}, path: {1}"), traceId, requestPath);
+                    _logger.Info(profiler.StopLog("Request processing completed successfully. TraceId: {0}, path: {1}"), traceId, requestPath);
                     await _next(context);
                     return;
                 }
+
+                // 取得 bypass ip，不用驗證 token
+                string? bypassIP = _configuration["BypassIP"];
+                string clientIP = HttpUtil.GetClientIp(context);
+                _logger.Debug("client ip: {0}", clientIP);
+                if(clientIP.IndexOf(bypassIP) >= 0)
+                {
+                    _logger.Info("clientIP: {0} in ByPassIP: {1}", clientIP, bypassIP);                    
+                    await _next(context);                    
+                }
+
 
                 var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
                 if (string.IsNullOrEmpty(authHeader) && context.Request.Cookies.TryGetValue("sso_token", out var cookieToken))
@@ -75,7 +89,7 @@ namespace ssoproxy.Middleware
                     var returnUrl = $"{context.Request.Path}{context.Request.QueryString}";
                     var loginUrl = $"/Home/SsoLogin?returnUrl={Uri.EscapeDataString(returnUrl)}";
 
-                    Logger.Info(profiler.StopLog("[SSO_MISSING_TOKEN] TraceId: {0}, request has no authentication token; redirecting to the SSO login page, returnUrl={1}"), traceId, returnUrl);
+                    _logger.Info(profiler.StopLog("[SSO_MISSING_TOKEN] TraceId: {0}, request has no authentication token; redirecting to the SSO login page, returnUrl={1}"), traceId, returnUrl);
                     context.Response.Redirect(loginUrl);
                     return;
                 }
@@ -84,7 +98,7 @@ namespace ssoproxy.Middleware
 
                 if (!string.IsNullOrEmpty(userJson))
                 {                    
-                    Logger.Info(profiler.StopLog("Request processing completed successfully. TraceId: {0}, path: {1}"), traceId, requestPath);
+                    _logger.Info(profiler.StopLog("Request processing completed successfully. TraceId: {0}, path: {1}"), traceId, requestPath);
                     await _next(context);
                 }
                 else
@@ -92,13 +106,13 @@ namespace ssoproxy.Middleware
                     var returnUrl = $"{context.Request.Path}{context.Request.QueryString}";
                     var loginUrl = $"/Home/SsoLogin?returnUrl={Uri.EscapeDataString(returnUrl)}";
 
-                    Logger.Info(profiler.StopLog("[SSO_AUTH_FAIL] TraceId: {0}, token expired or not found; redirecting to the SSO login page, returnUrl={1}"), traceId, returnUrl);
+                    _logger.Info(profiler.StopLog("[SSO_AUTH_FAIL] TraceId: {0}, token expired or not found; redirecting to the SSO login page, returnUrl={1}"), traceId, returnUrl);
                     context.Response.Redirect(loginUrl);
                 }
             }                        
             catch (Exception ex) when (ex is not GDException)
             {
-                Logger.Error(profiler.StopLog("[SSO_GLOBAL_ERROR] TraceId: {0}, unexpected error occurred, exception: {1}"), traceId, ex.ToString());
+                _logger.Error(profiler.StopLog("[SSO_GLOBAL_ERROR] TraceId: {0}, unexpected error occurred, exception: {1}"), traceId, ex.ToString());
                 /*context.Response.StatusCode = 500;
                 context.Response.ContentType = "text/plain";
                 await context.Response.WriteAsync($"Internal Server Error: {ex.Message}");*/                                

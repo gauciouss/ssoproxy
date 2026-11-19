@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using NLog;
 
+var Logger = LogManager.Setup().LoadConfigurationFromFile("nlog.config").GetCurrentClassLogger();
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
