@@ -5,6 +5,11 @@ namespace gd.Util;
 
 public static class HttpUtil
 {
+    /// <summary>
+    /// 取得客戶端IP
+    /// </summary>
+    /// <param name="context"></param>
+    /// <returns></returns>
     public static string GetClientIp(HttpContext? context)
     {
         if (context == null)
@@ -15,7 +20,7 @@ public static class HttpUtil
         var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
         if (!string.IsNullOrWhiteSpace(forwardedFor))
         {
-            var firstIp = forwardedFor.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            var firstIp = forwardedFor.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)            
                                       .FirstOrDefault();
             if (IsValidIp(firstIp, out var parsedForwardedIp))
             {

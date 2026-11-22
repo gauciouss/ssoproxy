@@ -9,7 +9,7 @@ namespace gd.Util
     {
         public static bool IsNullOrEmpty(string? str)
         {
-            return string.IsNullOrEmpty(str);
+            return string.IsNullOrEmpty(Trim(str));
         }
 
         public static string? Trim(string? str)
