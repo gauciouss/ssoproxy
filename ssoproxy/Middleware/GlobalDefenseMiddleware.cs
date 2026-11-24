@@ -59,7 +59,7 @@ namespace ssoproxy.Middleware
             try
             {
                 var pathValidator = context.RequestServices.GetRequiredService<IPathValidatorService>();
-
+                
                 if (pathValidator.IsBypassable(requestPath))
                 {
                     _logger.Info(profiler.StopLog("Request processing completed successfully. TraceId: {0}, path: {1}"), traceId, requestPath);
@@ -70,7 +70,7 @@ namespace ssoproxy.Middleware
                 // 取得 bypass ip，不用驗證 token
                 string? bypassIP = _configuration["BypassIP"];
                 string clientIP = HttpUtil.GetClientIp(context);
-                _logger.Debug("client ip: {0}", clientIP);
+                _logger.Debug("client ip: {0}", clientIP);                                
                 if(clientIP.IndexOf(bypassIP) >= 0)
                 {
                     _logger.Info("clientIP: {0} in ByPassIP: {1}", clientIP, bypassIP);                    

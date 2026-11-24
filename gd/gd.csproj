@@ -6,9 +6,15 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+<<<<<<< Updated upstream
   <ItemGroup>    
     <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+=======
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+>>>>>>> Stashed changes
   </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="NLog" Version="5.3.0" />

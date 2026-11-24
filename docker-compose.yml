@@ -121,6 +121,7 @@ services:
     volumes:
       - ./ssoproxymgr/appsettings.json:/app/appsettings.json:ro
       - ./ssoproxymgr/logs:/app/logs
+      - ./ssoproxymgr/wwwroot:/app/wwwroot
     depends_on:
       sso-poc-proxy1:
         condition: service_started

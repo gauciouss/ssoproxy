@@ -70,7 +70,7 @@ public class AccountController : Controller
                 });
 
             var redirectUrl = string.IsNullOrWhiteSpace(returnUrl)
-                ? Url.Action("Index", "Proxy") ?? "/"
+                ? Url.Action("Index", "/") ?? "/"
                 : returnUrl;
 
             return LocalRedirect(redirectUrl);
