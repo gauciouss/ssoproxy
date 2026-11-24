@@ -6,17 +6,12 @@ using System.Threading.Tasks;
 namespace gd.Util
 {
     public class StringUtil
-    {
-        public static bool IsNullOrEmpty(string? str)
-        {
-            return string.IsNullOrEmpty(Trim(str));
-        }
-
-        public static string? Trim(string? str)
-        {
-            return str?.Trim();
-        }
-
+    {                
+        /// <summary>
+        /// 檢查字串是否為空白字串
+        /// </summary>
+        /// <param name="str"></param>
+        /// <returns></returns>
         public static bool IsNullOrWhiteSpace(string? str)
         {
             return string.IsNullOrWhiteSpace(str);

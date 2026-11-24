@@ -61,9 +61,13 @@ public static class HttpUtil
         return IPAddress.TryParse(cleanIp, out ipAddress);
     }
 
+    /// <summary>
+    /// 將 IPv4-mapped IPv6 (例如 ::ffff:192.168.1.10) 轉回純 IPv4 字串
+    /// </summary>
+    /// <param name="ip"></param>
+    /// <returns></returns>
     private static string NormalizeIp(IPAddress ip)
-    {
-        // 將 IPv4-mapped IPv6 (例如 ::ffff:192.168.1.10) 轉回純 IPv4 字串
+    {        
         if (ip.IsIPv4MappedToIPv6)
         {
             ip = ip.MapToIPv4();

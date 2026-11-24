@@ -42,6 +42,6 @@ public class Util
     /// <returns></returns>
     public static bool IsEmpty(string str)
     {
-        return StringUtil.IsNullOrEmpty(str);
+        return StringUtil.IsNullOrWhiteSpace(str);
     }
 }
