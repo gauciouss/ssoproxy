@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Http;
 
 namespace gd.Util;
 
+
+/// <summary>
+/// HTTP 工具類別
+/// </summary>
 public static class HttpUtil
 {
     /// <summary>
@@ -45,6 +49,12 @@ public static class HttpUtil
         return string.Empty;
     }
 
+    /// <summary>
+    /// 檢查 IP 字串是否有效
+    /// </summary>
+    /// <param name="ipString"></param>
+    /// <param name="ipAddress"></param>
+    /// <returns></returns>
     private static bool IsValidIp(string? ipString, out IPAddress? ipAddress)
     {
         ipAddress = null;
