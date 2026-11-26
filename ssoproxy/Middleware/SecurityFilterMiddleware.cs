@@ -17,6 +17,11 @@ public class SecurityFilterMiddleware
         _next = next ?? throw new ArgumentNullException(nameof(next));
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="context"></param>
+    /// <returns></returns>
     public async Task InvokeAsync(HttpContext context)
     {
         var request = context.Request;
@@ -28,6 +33,7 @@ public class SecurityFilterMiddleware
             suspiciousInputs.Add("path");
         }
 
+        // 檢查所有body內的參數內容是否構成SQLInjection
         foreach (var key in request.Query.Keys)
         {
             foreach (var value in request.Query[key])
@@ -43,6 +49,7 @@ public class SecurityFilterMiddleware
             }
         }
 
+        // 檢查所有header內的參數內容是否構成SQLInjection
         foreach (var key in request.Headers.Keys)
         {
             foreach (var value in request.Headers[key])
@@ -56,6 +63,7 @@ public class SecurityFilterMiddleware
             }
         }
 
+        // 檢查所有cookies內的參數內容是否構成SQLInjection
         foreach (var key in request.Cookies.Keys)
         {
             Logger.Trace("Checking cookie: {0}={1}", key, request.Cookies[key]);
@@ -65,6 +73,7 @@ public class SecurityFilterMiddleware
             }
         }
 
+        // 檢查form內的參數內容是否構成SQLInjection
         if (request.HasFormContentType)
         {
             try
@@ -85,10 +94,11 @@ public class SecurityFilterMiddleware
             }
             catch (InvalidOperationException)
             {
-                // Some requests may not have a readable form payload; allow normal request flow to continue.
+                // Some requests may not have a readable form payload; allow normal request flow to continue.                
             }
         }
 
+        
         if (suspiciousInputs.Count > 0)
         {
             var fieldList = string.Join(", ", suspiciousInputs.Distinct());

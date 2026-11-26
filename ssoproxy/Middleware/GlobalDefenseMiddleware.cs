@@ -66,7 +66,7 @@ namespace ssoproxy.Middleware
                     await _next(context);
                     return;
                 }
-
+                
                 // 取得 bypass ip，不用驗證 token
                 string? bypassIP = _configuration["BypassIP"];
                 string clientIP = HttpUtil.GetClientIp(context);
