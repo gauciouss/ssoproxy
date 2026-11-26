@@ -6,13 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-<<<<<<< Updated upstream
   <ItemGroup>    
     <FrameworkReference Include="Microsoft.AspNetCore.App"/>
-=======
-  <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
->>>>>>> Stashed changes
   </ItemGroup>
 
 
