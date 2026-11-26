@@ -71,10 +71,11 @@ namespace ssoproxy.Middleware
                 string? bypassIP = _configuration["BypassIP"];
                 string clientIP = HttpUtil.GetClientIp(context);
                 _logger.Debug("client ip: {0}", clientIP);                                
-                if(clientIP.IndexOf(bypassIP) >= 0)
+                if(bypassIP.IndexOf(clientIP) >= 0)
                 {
                     _logger.Info("clientIP: {0} in ByPassIP: {1}", clientIP, bypassIP);                    
-                    await _next(context);                    
+                    await _next(context);       
+                    return;             
                 }
 
 

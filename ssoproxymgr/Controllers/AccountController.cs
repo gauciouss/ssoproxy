@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NLog;
 
 namespace ssoproxymgr.Controllers;
 
@@ -12,6 +13,8 @@ public class AccountController : Controller
 {
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
+
+    private readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
     public AccountController(IConfiguration configuration, IHttpClientFactory httpClientFactory)
     {
@@ -42,8 +45,9 @@ public class AccountController : Controller
 
         if (string.Equals(username, expectedUsername, StringComparison.Ordinal) &&
             string.Equals(password, expectedPassword, StringComparison.Ordinal))
-        {
+        {            
             var proxyToken = await GetSsoProxyTokenAsync();
+            _logger.Debug("ssoproxy token: {}", proxyToken);
             if (string.IsNullOrWhiteSpace(proxyToken))
             {
                 ViewData["ReturnUrl"] = returnUrl;
