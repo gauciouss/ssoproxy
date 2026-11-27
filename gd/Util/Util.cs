@@ -40,7 +40,7 @@ public class Util
     /// </summary>
     /// <param name="str"></param>
     /// <returns></returns>
-    public static bool IsEmpty(string str)
+    public static bool IsEmpty(string? str)
     {
         return StringUtil.IsNullOrWhiteSpace(str);
     }

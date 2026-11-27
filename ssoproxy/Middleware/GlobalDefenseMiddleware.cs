@@ -69,8 +69,8 @@ namespace ssoproxy.Middleware
                 // 取得 bypass ip，不用驗證 token
                 string? bypassIP = _configuration["BypassIP"];
                 string clientIP = HttpUtil.GetClientIp(context);
-                _logger.Debug("client ip: {0}", clientIP);                                
-                if(bypassIP.IndexOf(clientIP) >= 0)
+                _logger.Debug("client ip: {0}", clientIP);                                                
+                if(!Util.IsEmpty(bypassIP) && bypassIP.IndexOf(clientIP) >= 0)
                 {
                     _logger.Info("clientIP: {0} in ByPassIP: {1}", clientIP, bypassIP);                    
                     await _next(context);       
@@ -79,12 +79,13 @@ namespace ssoproxy.Middleware
 
 
                 var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
-                if (string.IsNullOrEmpty(authHeader) && context.Request.Cookies.TryGetValue("sso_token", out var cookieToken))
+                _logger.Debug("authHeader: {}", authHeader);
+                if (!Util.IsEmpty(authHeader))
                 {
-                    authHeader = $"Bearer {cookieToken}";
+                    if(context.Request.Cookies.TryGetValue("sso_token", out var cookieToken))
+                        authHeader = $"Bearer {cookieToken}";
                 }
-
-                if (string.IsNullOrEmpty(authHeader))
+                else
                 {
                     var returnUrl = $"{context.Request.Path}{context.Request.QueryString}";
                     var loginUrl = $"/Home/SsoLogin?returnUrl={Uri.EscapeDataString(returnUrl)}";
@@ -93,6 +94,7 @@ namespace ssoproxy.Middleware
                     context.Response.Redirect(loginUrl);
                     return;
                 }
+                
                 
                 string? userJson = await _tokenService.ValidateTokenAsync(authHeader);
 
