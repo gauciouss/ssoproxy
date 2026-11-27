@@ -45,8 +45,7 @@ namespace ssoproxy.Middleware
         /// 邏輯說明：檢查請求是否符合免驗證條件，若不符合則驗證 Token
         /// </summary>
         /// <param name="context"></param>
-        /// <returns></returns> <summary>
-        /// 
+        /// <returns></returns> <summary>        
         /// </summary>
         /// <param name="context"></param>
         /// <returns></returns>

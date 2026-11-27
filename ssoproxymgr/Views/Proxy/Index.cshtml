@@ -9,91 +9,878 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Reverse Proxy 管理</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 24px; background: #f8fafc; color: #1f2937; }
-        h1 { margin-bottom: 16px; }
-        .toolbar { display: flex; gap: 12px; margin-bottom: 16px; }
-        button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
-        .primary { background: #2563eb; color: white; }
-        .secondary { background: #e5e7eb; color: #111827; }
-        .logout-link { display: inline-flex; align-items: center; justify-content: center; background: #111827; color: white; border-radius: 6px; padding: 10px 16px; text-decoration: none; font-weight: 600; }
-        textarea { width: 100%; min-height: 620px; font-family: Consolas, monospace; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; }
-        .status { margin-top: 12px; min-height: 24px; font-weight: 600; }
+        :root {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --input-border: #cbd5e1;
+            --text: #1f2937;
+            --muted: #64748b;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary: #e5e7eb;
+            --secondary-hover: #d1d5db;
+            --danger: #dc2626;
+            --danger-bg: #fee2e2;
+            --danger-hover: #fecaca;
+            --success: #15803d;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            margin: 24px;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 26px;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        button {
+            padding: 9px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background-color 0.15s ease, opacity 0.15s ease;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .primary { background: var(--primary); color: white; }
+        .primary:hover:not(:disabled) { background: var(--primary-hover); }
+
+        .secondary { background: var(--secondary); color: #111827; }
+        .secondary:hover:not(:disabled) { background: var(--secondary-hover); }
+
+        .add-btn {
+            background: #eff6ff;
+            color: var(--primary);
+            border: 1px solid #bfdbfe;
+            padding: 7px 12px;
+            font-size: 13px;
+        }
+        .add-btn:hover:not(:disabled) { background: #dbeafe; }
+
+        .delete-btn {
+            background: var(--danger-bg);
+            color: var(--danger);
+            padding: 6px 10px;
+            font-size: 13px;
+        }
+        .delete-btn:hover:not(:disabled) { background: var(--danger-hover); }
+
+        .logout-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #111827;
+            color: white;
+            border-radius: 6px;
+            padding: 9px 15px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .logout-link:hover { background: #1f2937; }
+
+        .status-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 18px;
+            padding: 10px 14px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .status {
+            min-height: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text);
+        }
+        .status.success { color: var(--success); }
+        .status.error { color: var(--danger); }
+
+        .hint {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .section-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            background: #f8fafc;
+        }
+
+        .section-title-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .count-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            color: #334155;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 680px;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        thead th {
+            background: #f1f5f9;
+            font-size: 13px;
+            font-weight: 700;
+            color: #334155;
+            white-space: nowrap;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .required-mark {
+            color: var(--danger);
+            margin-left: 2px;
+        }
+
+        .cell-input {
+            width: 100%;
+            padding: 7px 10px;
+            border: 1px solid var(--input-border);
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: Consolas, Menlo, Monaco, monospace;
+            background: #ffffff;
+            color: var(--text);
+        }
+
+        .cell-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        }
+
+        .cell-input.input-invalid {
+            border-color: var(--danger);
+            background: #fef2f2;
+        }
+
+        .cell-number {
+            width: 96px;
+        }
+
+        .col-enabled {
+            width: 76px;
+            text-align: center;
+        }
+
+        .col-action {
+            width: 84px;
+            text-align: center;
+        }
+
+        .cell-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        .empty-row td {
+            text-align: center;
+            color: var(--muted);
+            padding: 20px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
-    <h1>Reverse Proxy 管理</h1>
-    <div class="toolbar">
-        <button class="secondary" type="button" id="loadBtn">載入設定</button>
-        <button class="secondary" type="button" id="saveBtn">儲存到資料庫</button>
-        <button class="primary" type="button" id="publishBtn">發佈到 ssoproxy</button>
-        <a class="logout-link" href="/Account/Logout">登出</a>
+    <div class="page-container">
+        <div class="page-header">
+            <h1>Reverse Proxy 管理</h1>
+            <div class="toolbar">
+                <button class="secondary" type="button" id="loadBtn">載入設定</button>
+                <button class="secondary" type="button" id="saveBtn">儲存到資料庫</button>
+                <button class="primary" type="button" id="publishBtn">發佈到 ssoproxy</button>
+                <a class="logout-link" href="/Account/Logout">登出</a>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div id="status" class="status"></div>
+            <div class="hint">提示：資料庫儲存採新增／更新模式；若要停用已存在設定，請取消勾選「啟用」再儲存或發佈。</div>
+        </div>
+
+        <datalist id="clusterIdOptions"></datalist>
+
+        <!-- Clusters -->
+        <section class="section-card">
+            <div class="section-header">
+                <div class="section-title-group">
+                    <h2 class="section-title">Clusters（集群設定）</h2>
+                    <span id="clustersCount" class="count-badge">0</span>
+                </div>
+                <button class="add-btn" type="button" id="addClusterBtn">+ 新增 Cluster</button>
+            </div>
+            <div class="table-wrapper">
+                <table id="clustersTable">
+                    <thead>
+                        <tr>
+                            <th>Cluster ID<span class="required-mark">*</span></th>
+                            <th>Cluster Name</th>
+                            <th class="col-enabled">啟用</th>
+                            <th class="col-action">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clustersBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Destinations -->
+        <section class="section-card">
+            <div class="section-header">
+                <div class="section-title-group">
+                    <h2 class="section-title">Destinations（目標位址設定）</h2>
+                    <span id="destinationsCount" class="count-badge">0</span>
+                </div>
+                <button class="add-btn" type="button" id="addDestinationBtn">+ 新增 Destination</button>
+            </div>
+            <div class="table-wrapper">
+                <table id="destinationsTable">
+                    <thead>
+                        <tr>
+                            <th>Cluster ID<span class="required-mark">*</span></th>
+                            <th>Destination Name<span class="required-mark">*</span></th>
+                            <th>Address<span class="required-mark">*</span></th>
+                            <th class="col-enabled">啟用</th>
+                            <th class="col-action">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="destinationsBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Routes -->
+        <section class="section-card">
+            <div class="section-header">
+                <div class="section-title-group">
+                    <h2 class="section-title">Routes（路由規則設定）</h2>
+                    <span id="routesCount" class="count-badge">0</span>
+                </div>
+                <button class="add-btn" type="button" id="addRouteBtn">+ 新增 Route</button>
+            </div>
+            <div class="table-wrapper">
+                <table id="routesTable">
+                    <thead>
+                        <tr>
+                            <th>Route Name<span class="required-mark">*</span></th>
+                            <th>Cluster ID<span class="required-mark">*</span></th>
+                            <th style="width: 110px;">Order</th>
+                            <th>Match Path</th>
+                            <th>Match Hosts</th>
+                            <th class="col-enabled">啟用</th>
+                            <th class="col-action">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="routesBody"></tbody>
+                </table>
+            </div>
+        </section>
     </div>
 
-    <textarea id="configJson" spellcheck="false"></textarea>
-    <div id="status" class="status"></div>
-
     <script>
-        const jsonBox = document.getElementById('configJson');
         const statusBox = document.getElementById('status');
+        const clusterIdOptions = document.getElementById('clusterIdOptions');
 
-        async function callApi(url, method, payload) {
-            const response = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: payload ? JSON.stringify(payload) : null
+        const clustersBody = document.getElementById('clustersBody');
+        const destinationsBody = document.getElementById('destinationsBody');
+        const routesBody = document.getElementById('routesBody');
+
+        const clustersCount = document.getElementById('clustersCount');
+        const destinationsCount = document.getElementById('destinationsCount');
+        const routesCount = document.getElementById('routesCount');
+
+        const loadBtn = document.getElementById('loadBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const publishBtn = document.getElementById('publishBtn');
+
+        function setStatus(message, type) {
+            statusBox.textContent = message;
+            statusBox.className = 'status' + (type ? ' ' + type : '');
+        }
+
+        function setBusy(busy) {
+            loadBtn.disabled = busy;
+            saveBtn.disabled = busy;
+            publishBtn.disabled = busy;
+        }
+
+        function pick(obj, camelKey, pascalKey, defaultValue) {
+            if (!obj || typeof obj !== 'object') {
+                return defaultValue;
+            }
+            if (obj[camelKey] !== undefined && obj[camelKey] !== null) {
+                return obj[camelKey];
+            }
+            if (obj[pascalKey] !== undefined && obj[pascalKey] !== null) {
+                return obj[pascalKey];
+            }
+            return defaultValue;
+        }
+
+        function createInput({ type = 'text', value = '', placeholder = '', field, listId = '', className = 'cell-input' }) {
+            const input = document.createElement('input');
+            input.type = type;
+            input.className = className;
+            input.dataset.field = field;
+            input.value = value ?? '';
+            if (placeholder) {
+                input.placeholder = placeholder;
+            }
+            if (listId) {
+                input.setAttribute('list', listId);
+            }
+            input.addEventListener('input', () => {
+                input.classList.remove('input-invalid');
+                if (field === 'clusterId' && input.closest('#clustersBody')) {
+                    refreshClusterOptions();
+                }
+            });
+            return input;
+        }
+
+        function createCheckbox(checked, field) {
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.className = 'cell-checkbox';
+            input.dataset.field = field;
+            input.checked = checked !== false;
+            return input;
+        }
+
+        function createDeleteButton(tbody, colSpan, updateCountFn) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'delete-btn';
+            btn.textContent = '移除';
+            btn.addEventListener('click', () => {
+                const tr = btn.closest('tr');
+                if (tr) {
+                    tr.remove();
+                }
+                ensureEmptyState(tbody, colSpan);
+                updateCountFn();
+                if (tbody === clustersBody) {
+                    refreshClusterOptions();
+                }
+            });
+            return btn;
+        }
+
+        function ensureEmptyState(tbody, colSpan) {
+            const dataRows = tbody.querySelectorAll('tr[data-row="true"]');
+            const existingEmpty = tbody.querySelector('tr.empty-row');
+            if (dataRows.length === 0) {
+                if (!existingEmpty) {
+                    const tr = document.createElement('tr');
+                    tr.className = 'empty-row';
+                    const td = document.createElement('td');
+                    td.colSpan = colSpan;
+                    td.textContent = '尚無資料，請點擊右上角按鈕新增。';
+                    tr.appendChild(td);
+                    tbody.appendChild(tr);
+                }
+            } else if (existingEmpty) {
+                existingEmpty.remove();
+            }
+        }
+
+        function updateCounts() {
+            clustersCount.textContent = clustersBody.querySelectorAll('tr[data-row="true"]').length;
+            destinationsCount.textContent = destinationsBody.querySelectorAll('tr[data-row="true"]').length;
+            routesCount.textContent = routesBody.querySelectorAll('tr[data-row="true"]').length;
+        }
+
+        function refreshClusterOptions() {
+            const ids = new Set();
+            clustersBody.querySelectorAll('tr[data-row="true"]').forEach(row => {
+                const val = row.querySelector('[data-field="clusterId"]')?.value.trim();
+                if (val) {
+                    ids.add(val);
+                }
             });
 
-            const text = await response.text();
-            if (response.status === 401) {
-                window.location.href = '/Account/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
-                return {
-                    ok: false,
-                    text: '未登入，已轉回登入頁面。'
-                };
-            }
+            clusterIdOptions.innerHTML = '';
+            Array.from(ids).sort().forEach(id => {
+                const option = document.createElement('option');
+                option.value = id;
+                clusterIdOptions.appendChild(option);
+            });
+        }
+
+        function appendClusterRow(item = {}) {
+            const tr = document.createElement('tr');
+            tr.dataset.row = 'true';
+
+            const tdId = document.createElement('td');
+            tdId.appendChild(createInput({
+                field: 'clusterId',
+                value: pick(item, 'clusterId', 'ClusterId', ''),
+                placeholder: '例如 target-web1'
+            }));
+
+            const tdName = document.createElement('td');
+            tdName.appendChild(createInput({
+                field: 'clusterName',
+                value: pick(item, 'clusterName', 'ClusterName', ''),
+                placeholder: '選填顯示名稱'
+            }));
+
+            const tdEnabled = document.createElement('td');
+            tdEnabled.className = 'col-enabled';
+            tdEnabled.appendChild(createCheckbox(pick(item, 'isEnabled', 'IsEnabled', true), 'isEnabled'));
+
+            const tdAction = document.createElement('td');
+            tdAction.className = 'col-action';
+            tdAction.appendChild(createDeleteButton(clustersBody, 4, updateCounts));
+
+            tr.append(tdId, tdName, tdEnabled, tdAction);
+            clustersBody.appendChild(tr);
+            ensureEmptyState(clustersBody, 4);
+            updateCounts();
+            refreshClusterOptions();
+            return tr;
+        }
+
+        function appendDestinationRow(item = {}) {
+            const tr = document.createElement('tr');
+            tr.dataset.row = 'true';
+
+            const tdClusterId = document.createElement('td');
+            tdClusterId.appendChild(createInput({
+                field: 'clusterId',
+                value: pick(item, 'clusterId', 'ClusterId', ''),
+                placeholder: '例如 target-web1',
+                listId: 'clusterIdOptions'
+            }));
+
+            const tdName = document.createElement('td');
+            tdName.appendChild(createInput({
+                field: 'destinationName',
+                value: pick(item, 'destinationName', 'DestinationName', ''),
+                placeholder: '例如 destination1'
+            }));
+
+            const tdAddress = document.createElement('td');
+            tdAddress.appendChild(createInput({
+                field: 'address',
+                value: pick(item, 'address', 'Address', ''),
+                placeholder: '例如 http://sso-poc-target-web1/'
+            }));
+
+            const tdEnabled = document.createElement('td');
+            tdEnabled.className = 'col-enabled';
+            tdEnabled.appendChild(createCheckbox(pick(item, 'isEnabled', 'IsEnabled', true), 'isEnabled'));
+
+            const tdAction = document.createElement('td');
+            tdAction.className = 'col-action';
+            tdAction.appendChild(createDeleteButton(destinationsBody, 5, updateCounts));
+
+            tr.append(tdClusterId, tdName, tdAddress, tdEnabled, tdAction);
+            destinationsBody.appendChild(tr);
+            ensureEmptyState(destinationsBody, 5);
+            updateCounts();
+            return tr;
+        }
+
+        function appendRouteRow(item = {}) {
+            const tr = document.createElement('tr');
+            tr.dataset.row = 'true';
+
+            const tdRouteName = document.createElement('td');
+            tdRouteName.appendChild(createInput({
+                field: 'routeName',
+                value: pick(item, 'routeName', 'RouteName', ''),
+                placeholder: '例如 test1-route'
+            }));
+
+            const tdClusterId = document.createElement('td');
+            tdClusterId.appendChild(createInput({
+                field: 'clusterId',
+                value: pick(item, 'clusterId', 'ClusterId', ''),
+                placeholder: '例如 target-web1',
+                listId: 'clusterIdOptions'
+            }));
+
+            const tdOrder = document.createElement('td');
+            const orderInput = createInput({
+                type: 'number',
+                field: 'order',
+                value: pick(item, 'order', 'Order', 100),
+                placeholder: '100',
+                className: 'cell-input cell-number'
+            });
+            orderInput.step = '1';
+            tdOrder.appendChild(orderInput);
+
+            const tdMatchPath = document.createElement('td');
+            tdMatchPath.appendChild(createInput({
+                field: 'matchPath',
+                value: pick(item, 'matchPath', 'MatchPath', ''),
+                placeholder: '例如 /{**catch-all}'
+            }));
+
+            const tdMatchHosts = document.createElement('td');
+            tdMatchHosts.appendChild(createInput({
+                field: 'matchHosts',
+                value: pick(item, 'matchHosts', 'MatchHosts', ''),
+                placeholder: '例如 test1.gd.com'
+            }));
+
+            const tdEnabled = document.createElement('td');
+            tdEnabled.className = 'col-enabled';
+            tdEnabled.appendChild(createCheckbox(pick(item, 'isEnabled', 'IsEnabled', true), 'isEnabled'));
+
+            const tdAction = document.createElement('td');
+            tdAction.className = 'col-action';
+            tdAction.appendChild(createDeleteButton(routesBody, 7, updateCounts));
+
+            tr.append(tdRouteName, tdClusterId, tdOrder, tdMatchPath, tdMatchHosts, tdEnabled, tdAction);
+            routesBody.appendChild(tr);
+            ensureEmptyState(routesBody, 7);
+            updateCounts();
+            return tr;
+        }
+
+        function renderConfig(payload) {
+            clustersBody.innerHTML = '';
+            destinationsBody.innerHTML = '';
+            routesBody.innerHTML = '';
+
+            const clusters = pick(payload, 'clusters', 'Clusters', []);
+            const destinations = pick(payload, 'destinations', 'Destinations', []);
+            const routes = pick(payload, 'routes', 'Routes', []);
+
+            clusters.forEach(appendClusterRow);
+            destinations.forEach(appendDestinationRow);
+            routes.forEach(appendRouteRow);
+
+            ensureEmptyState(clustersBody, 4);
+            ensureEmptyState(destinationsBody, 5);
+            ensureEmptyState(routesBody, 7);
+            updateCounts();
+            refreshClusterOptions();
+        }
+
+        function collectAndValidatePayload() {
+            document.querySelectorAll('.input-invalid').forEach(el => el.classList.remove('input-invalid'));
+            const errors = [];
+
+            const clusters = [];
+            const seenClusterIds = new Set();
+            clustersBody.querySelectorAll('tr[data-row="true"]').forEach((row, idx) => {
+                const rowNo = idx + 1;
+                const idInput = row.querySelector('[data-field="clusterId"]');
+                const nameInput = row.querySelector('[data-field="clusterName"]');
+                const enabledInput = row.querySelector('[data-field="isEnabled"]');
+
+                const clusterId = idInput.value.trim();
+                const clusterName = nameInput.value.trim();
+
+                if (!clusterId) {
+                    idInput.classList.add('input-invalid');
+                    errors.push(`Clusters 第 ${rowNo} 列缺少 Cluster ID`);
+                } else if (seenClusterIds.has(clusterId.toLowerCase())) {
+                    idInput.classList.add('input-invalid');
+                    errors.push(`Clusters 第 ${rowNo} 列 Cluster ID「${clusterId}」重複`);
+                } else {
+                    seenClusterIds.add(clusterId.toLowerCase());
+                }
+
+                clusters.push({
+                    clusterId,
+                    clusterName: clusterName || null,
+                    isEnabled: enabledInput.checked
+                });
+            });
+
+            const destinations = [];
+            const seenDestKeys = new Set();
+            destinationsBody.querySelectorAll('tr[data-row="true"]').forEach((row, idx) => {
+                const rowNo = idx + 1;
+                const clusterIdInput = row.querySelector('[data-field="clusterId"]');
+                const nameInput = row.querySelector('[data-field="destinationName"]');
+                const addressInput = row.querySelector('[data-field="address"]');
+                const enabledInput = row.querySelector('[data-field="isEnabled"]');
+
+                const clusterId = clusterIdInput.value.trim();
+                const destinationName = nameInput.value.trim();
+                const address = addressInput.value.trim();
+
+                if (!clusterId) {
+                    clusterIdInput.classList.add('input-invalid');
+                    errors.push(`Destinations 第 ${rowNo} 列缺少 Cluster ID`);
+                }
+                if (!destinationName) {
+                    nameInput.classList.add('input-invalid');
+                    errors.push(`Destinations 第 ${rowNo} 列缺少 Destination Name`);
+                }
+                if (!address) {
+                    addressInput.classList.add('input-invalid');
+                    errors.push(`Destinations 第 ${rowNo} 列缺少 Address`);
+                }
+                if (clusterId && destinationName) {
+                    const key = `${clusterId.toLowerCase()}::${destinationName.toLowerCase()}`;
+                    if (seenDestKeys.has(key)) {
+                        clusterIdInput.classList.add('input-invalid');
+                        nameInput.classList.add('input-invalid');
+                        errors.push(`Destinations 第 ${rowNo} 列「${clusterId} / ${destinationName}」重複`);
+                    } else {
+                        seenDestKeys.add(key);
+                    }
+                }
+
+                destinations.push({
+                    clusterId,
+                    destinationName,
+                    address,
+                    isEnabled: enabledInput.checked
+                });
+            });
+
+            const routes = [];
+            const seenRouteNames = new Set();
+            routesBody.querySelectorAll('tr[data-row="true"]').forEach((row, idx) => {
+                const rowNo = idx + 1;
+                const routeNameInput = row.querySelector('[data-field="routeName"]');
+                const clusterIdInput = row.querySelector('[data-field="clusterId"]');
+                const orderInput = row.querySelector('[data-field="order"]');
+                const matchPathInput = row.querySelector('[data-field="matchPath"]');
+                const matchHostsInput = row.querySelector('[data-field="matchHosts"]');
+                const enabledInput = row.querySelector('[data-field="isEnabled"]');
+
+                const routeName = routeNameInput.value.trim();
+                const clusterId = clusterIdInput.value.trim();
+                const rawOrder = orderInput.value.trim();
+                const order = rawOrder === '' ? 100 : Number(rawOrder);
+                const matchPath = matchPathInput.value.trim();
+                const matchHosts = matchHostsInput.value.trim();
+
+                if (!routeName) {
+                    routeNameInput.classList.add('input-invalid');
+                    errors.push(`Routes 第 ${rowNo} 列缺少 Route Name`);
+                } else if (seenRouteNames.has(routeName.toLowerCase())) {
+                    routeNameInput.classList.add('input-invalid');
+                    errors.push(`Routes 第 ${rowNo} 列 Route Name「${routeName}」重複`);
+                } else {
+                    seenRouteNames.add(routeName.toLowerCase());
+                }
+
+                if (!clusterId) {
+                    clusterIdInput.classList.add('input-invalid');
+                    errors.push(`Routes 第 ${rowNo} 列缺少 Cluster ID`);
+                }
+
+                if (!Number.isInteger(order)) {
+                    orderInput.classList.add('input-invalid');
+                    errors.push(`Routes 第 ${rowNo} 列 Order 必須為整數`);
+                }
+
+                routes.push({
+                    routeName,
+                    clusterId,
+                    order,
+                    matchPath: matchPath || null,
+                    matchHosts: matchHosts || null,
+                    isEnabled: enabledInput.checked
+                });
+            });
 
             return {
-                ok: response.ok,
-                text
+                valid: errors.length === 0,
+                errors,
+                payload: {
+                    clusters,
+                    routes,
+                    destinations
+                }
             };
         }
 
+        async function callApi(url, method, payload) {
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: payload ? JSON.stringify(payload) : null
+                });
+
+                const text = await response.text();
+                if (response.status === 401) {
+                    window.location.href = '/Account/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                    return {
+                        ok: false,
+                        text: '未登入，已轉回登入頁面。'
+                    };
+                }
+
+                return {
+                    ok: response.ok,
+                    text
+                };
+            } catch (err) {
+                return {
+                    ok: false,
+                    text: err?.message || '網路連線異常'
+                };
+            }
+        }
+
         async function loadConfig() {
-            statusBox.textContent = '載入中...';
+            setBusy(true);
+            setStatus('載入中...', '');
             const result = await callApi('/api/proxy/config', 'GET', null);
+            setBusy(false);
+
             if (!result.ok) {
-                statusBox.textContent = '載入失敗';
+                setStatus('載入失敗：' + result.text, 'error');
                 return;
             }
 
-            const payload = JSON.parse(result.text || '{}');
-            jsonBox.value = JSON.stringify(payload, null, 2);
-            statusBox.textContent = '設定已載入';
+            try {
+                const payload = JSON.parse(result.text || '{}');
+                renderConfig(payload);
+                setStatus('設定已載入', 'success');
+            } catch (err) {
+                setStatus('解析設定資料失敗', 'error');
+            }
         }
 
         async function saveConfig(publish) {
-            let payload;
-            try {
-                payload = JSON.parse(jsonBox.value || '{}');
-            } catch (err) {
-                statusBox.textContent = 'JSON 格式錯誤';
+            const { valid, errors, payload } = collectAndValidatePayload();
+            if (!valid) {
+                setStatus('驗證失敗：' + errors[0], 'error');
+                const firstInvalid = document.querySelector('.input-invalid');
+                if (firstInvalid) {
+                    firstInvalid.focus();
+                }
                 return;
             }
 
-            statusBox.textContent = publish ? '發佈中...' : '儲存中...';
+            setBusy(true);
+            setStatus(publish ? '發佈中...' : '儲存中...', '');
             const endpoint = publish ? '/api/proxy/publish' : '/api/proxy/save';
             const result = await callApi(endpoint, 'POST', payload);
+            setBusy(false);
+
             if (!result.ok) {
-                statusBox.textContent = '操作失敗：' + result.text;
+                setStatus('操作失敗：' + result.text, 'error');
                 return;
             }
 
-            statusBox.textContent = publish ? '發布成功' : '儲存成功';
+            setStatus(publish ? '發佈成功' : '儲存成功', 'success');
         }
 
-        document.getElementById('loadBtn').addEventListener('click', loadConfig);
-        document.getElementById('saveBtn').addEventListener('click', () => saveConfig(false));
-        document.getElementById('publishBtn').addEventListener('click', () => saveConfig(true));
+        document.getElementById('addClusterBtn').addEventListener('click', () => {
+            const row = appendClusterRow({ isEnabled: true });
+            row.querySelector('[data-field="clusterId"]')?.focus();
+        });
+
+        document.getElementById('addDestinationBtn').addEventListener('click', () => {
+            const row = appendDestinationRow({ isEnabled: true });
+            row.querySelector('[data-field="clusterId"]')?.focus();
+        });
+
+        document.getElementById('addRouteBtn').addEventListener('click', () => {
+            const row = appendRouteRow({ order: 100, isEnabled: true });
+            row.querySelector('[data-field="routeName"]')?.focus();
+        });
+
+        loadBtn.addEventListener('click', loadConfig);
+        saveBtn.addEventListener('click', () => saveConfig(false));
+        publishBtn.addEventListener('click', () => saveConfig(true));
 
         loadConfig();
     </script>
